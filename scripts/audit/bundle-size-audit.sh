@@ -26,7 +26,8 @@ if command -v cargo >/dev/null 2>&1; then
   fi
 fi
 
-gz() { gzip -9c "$1" | wc -c | tr -d ' '; }
+# Reproducible across platforms; `gzip -9` is not. See scripts/audit/gzsize.py.
+gz() { python3 scripts/audit/gzsize.py "$1"; }
 PARTS=("$SHIPPED" packages/core/src/index.js packages/core/worklet/processor.js)
 
 total=0
