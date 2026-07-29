@@ -9,7 +9,7 @@ No samples, no CDN, works offline. `noteOn()` and you have a sound.
 >
 > ```sh
 > cargo build -p subtractive-dsp --target wasm32-unknown-unknown --release
-> scripts/dev/serve.sh     # → http://localhost:8174/apps/playground/
+> scripts/dev/serve.sh     # → http://127.0.0.1:8291/apps/playground/showcase.html
 > ```
 
 Second library in the `sets-of-instruments-js` family.
@@ -36,8 +36,8 @@ Budget is 60 KB gzipped for the whole library — currently **50%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **8.1 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 12.4x |
+| audio-thread budget used | **7.4 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 13.4x |
 <!-- /generated:bench -->
 
 Measured on the machine that regenerated this table, with the voice pool saturated and
