@@ -38,7 +38,7 @@ try {
   await p.screenshot({ path: `${out}/showcase.png`, fullPage: true });
 
   await p.goto(`http://127.0.0.1:${PORT}/apps/playground/`);
-  await p.click("#start");
+  await p.keyboard.press("a");
   await p.waitForFunction(() => window.__playground?.engine != null, null, { timeout: 15000 });
   await p.evaluate(() => { for (const n of [48,52,55,60]) document.querySelector(`[data-note="${n}"]`)?.classList.add("on"); });
   await p.screenshot({ path: `${out}/playground.png`, fullPage: true });

@@ -74,4 +74,4 @@ if [ "${1:-run}" = "start" ]; then
   exit 1
 fi
 
-exec python3 -m http.server "$PORT" --bind 127.0.0.1
+exec python3 scripts/dev/server.py "$PORT"

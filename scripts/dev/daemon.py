@@ -35,4 +35,4 @@ with open(os.path.join(root, f".dev-server.{port}.pid"), "w") as f:
     f.write(str(os.getpid()))
 
 os.execvp(sys.executable,
-          [sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1"])
+          [sys.executable, os.path.join(root, "scripts/dev/server.py"), str(port)])

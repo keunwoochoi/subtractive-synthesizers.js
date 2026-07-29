@@ -25,7 +25,7 @@ try {
   page.on("console", (m) => { if (m.type() === "error") errs.push(m.text()); });
 
   await page.goto(`http://127.0.0.1:${PORT}/apps/playground/`, { timeout: 15000 });
-  await page.click("#start");
+  await page.keyboard.press("a");
   await page.waitForFunction(() => window.__playground?.engine != null, null, { timeout: 20000 });
 
   // Tap the engine node and measure. Measuring the NODE rather than the destination is
@@ -54,6 +54,10 @@ try {
     e.noteOff(60);
     return { before, during };
   }, patch);
+
+  if (await page.locator("#start").count()) {
+    fail("a Start button is back — the first gesture should boot the engine");
+  }
 
   const state = await page.evaluate(() => window.__playground.engine.context.state);
   console.log(`  context state after Start: ${state}`);

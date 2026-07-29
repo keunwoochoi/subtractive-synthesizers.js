@@ -76,6 +76,9 @@
   #start[disabled]{opacity:.45;cursor:default}
   .bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
   .hint{color:var(--dim);font-size:12px}
+  .diag{font-size:11.5px;color:var(--dim)}
+  .diag b{font-weight:600}
+  .diag .ok{color:var(--fx)} .diag .bad{color:#ff6b6b}
   #kb{margin-top:18px;position:relative;height:150px;user-select:none;touch-action:none;
       border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
   .wk{position:absolute;top:0;bottom:0;background:#f2f4f6;border-right:1px solid #c3c8cf}
@@ -101,7 +104,7 @@
 
 <main>
   <div class="bar">
-    <button id="start">▶ Start audio</button>
+    <span id="diag" class="diag">press a key to start</span>
     <div class="hint" id="status"></div>
   </div>
 
@@ -324,7 +327,7 @@ const arp = {
 };
 
 function down(note, vel = 0.85) {
-  if (!engine || held.has(note)) return;
+  if (held.has(note)) return;
   held.add(note);
   keyEls.get(note)?.classList.add("on");
   if (arp.on) {
@@ -334,17 +337,19 @@ function down(note, vel = 0.85) {
     if (arp.hold) arp.latched.add(note);
     return;                       // the arp plays it, not the key
   }
-  engine.noteOn(note, vel);
+  // The very first note is also the gesture that boots the engine, so it has to survive
+  // the wait. Re-check `held`: a fast press-and-release must not leave a note stuck on.
+  ensureEngine().then((e) => { if (held.has(note)) e.noteOn(note, vel); }).catch(() => {});
 }
 function up(note) {
-  if (!engine || !held.has(note)) return;
+  if (!held.has(note)) return;
   held.delete(note);
   keyEls.get(note)?.classList.remove("on");
   if (arp.on) {
     if (arp.hold && held.size === 0) arp.restart = true;   // next press starts anew
     return;
   }
-  engine.noteOff(note);
+  engine?.noteOff(note);
 }
 
 /** Notes the arp should cycle, in play order, expanded across octaves. */
@@ -516,27 +521,59 @@ function unlockedContext() {
   return ctx;
 }
 
+const diag = document.getElementById("diag");
+function showDiag() {
+  if (!engine) { diag.textContent = "press a key to start"; return; }
+  const c = engine.context;
+  const bad = c.state !== "running";
+  diag.innerHTML =
+    `context <b class="${bad ? "bad" : "ok"}">${c.state}</b> · ` +
+    `${Math.round(c.sampleRate)} Hz · voices <b>${engine.voices}</b>` +
+    (bad ? ' · <b class="bad">click Start again</b>' : "");
+}
+setInterval(showDiag, 400);
+
 const status = document.getElementById("status");
-document.getElementById("start").addEventListener("click", async (e) => {
-  e.target.disabled = true;
-  status.textContent = "loading engine…";
-  try {
-    const ctx = unlockedContext();
-    engine = await createEngine({
-      context: ctx,
-      wasmUrl: "../../packages/core/wasm/subtractive_dsp.wasm",
-      workletUrl: "../../packages/core/worklet/processor.js",
-    });
-    await engine.resume();      // harmless if already running; required if a policy blocked it
+// Start the engine on the FIRST GESTURE OF ANY KIND — a key press, a click on the
+// keyboard, choosing a patch, moving a slider.
+//
+// A browser will not start audio without a user gesture, but nothing says the gesture has
+// to be a button that exists only to be clicked. Making the user press "Start audio"
+// before playing a note is a hoop, and someone who skips it presses keys and hears
+// silence with no explanation — which is exactly what happened.
+//
+// The context is still created and resumed SYNCHRONOUSLY inside the handler; only the
+// WASM fetch and worklet registration are awaited, which is the part that may not be.
+let enginePromise = null;
+function ensureEngine() {
+  if (enginePromise) return enginePromise;
+  const ctx = unlockedContext();          // synchronous, inside the gesture
+  status.textContent = "starting…";
+  enginePromise = createEngine({
+    context: ctx,
+    wasmUrl: "../../packages/core/wasm/subtractive_dsp.wasm",
+    workletUrl: "../../packages/core/worklet/processor.js",
+  }).then((e) => {
+    engine = e;
     for (const el of document.querySelectorAll("input[type=range][data-param]"))
-      engine.setParam(el.id, Number(el.value));
+      e.setParam(el.id, Number(el.value));
     for (const id of ["shape", "filterKind"])
-      engine.setParam(id, Number(document.getElementById(id).value));
+      e.setParam(id, Number(document.getElementById(id).value));
     loadPreset(presetSel.value || Object.keys(PRESETS)[0]);
     status.textContent = "";
-  } catch (err) {
+    showDiag();
+    return e;
+  }).catch((err) => {
     status.textContent = `failed: ${err.message}`;
-    e.target.disabled = false;
-  }
-});
+    diag.innerHTML = `<b class="bad">failed: ${err.message}</b>`;
+    enginePromise = null;                 // let the next gesture try again
+    throw err;
+  });
+  return enginePromise;
+}
+
+// Any interaction is a good enough gesture to boot on.
+for (const ev of ["pointerdown", "keydown"]) {
+  addEventListener(ev, () => { ensureEngine().catch(() => {}); }, { once: true, capture: true });
+}
 </script>
