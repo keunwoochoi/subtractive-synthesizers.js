@@ -6,7 +6,14 @@
 // works — a wrong `exports` map, a file left out of `files`, or a WASM URL that only
 // resolves relative to src/ all produce a package that fails on someone else's machine
 // and passes on ours.
-import { chromium } from "playwright";
+import * as pw from "playwright";
+const BROWSER = process.env.BROWSER ?? "chromium";
+// --autoplay-policy is a Chromium-only flag; Linux WebKit refuses to start when
+// handed an unknown option, while macOS WebKit ignored it. Hence green locally and
+// red on CI. Select flags per engine rather than passing one set to all of them.
+const launchArgs = BROWSER === "chromium"
+  ? ["--autoplay-policy=no-user-gesture-required"] : [];
+const chromium = pw[BROWSER];
 import { execSync } from "node:child_process";
 import { mkdtempSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -59,7 +66,7 @@ const PORT = 8302;
 const server = spawn("python3", ["-m", "http.server", String(PORT), "--bind", "127.0.0.1"],
                      { cwd: work, stdio: "ignore" });
 await new Promise((r) => setTimeout(r, 800));
-const browser = await chromium.launch({ args: ["--autoplay-policy=no-user-gesture-required"] });
+const browser = await chromium.launch({ args: launchArgs });
 try {
   const page = await browser.newPage();
   const errs = [];

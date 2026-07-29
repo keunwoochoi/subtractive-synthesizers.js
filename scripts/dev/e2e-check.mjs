@@ -10,6 +10,11 @@
 // WebAssembly.Module cloning bug the worklet already works around.
 import * as pw from "playwright";
 const BROWSER = process.env.BROWSER ?? "chromium";
+// --autoplay-policy is a Chromium-only flag; Linux WebKit refuses to start when
+// handed an unknown option, while macOS WebKit ignored it. Hence green locally and
+// red on CI. Select flags per engine rather than passing one set to all of them.
+const launchArgs = BROWSER === "chromium"
+  ? ["--autoplay-policy=no-user-gesture-required"] : [];
 const chromium = pw[BROWSER];
 import { spawn } from "node:child_process";
 
@@ -33,7 +38,7 @@ const server = spawn("python3", ["-m", "http.server", String(PORT), "--bind", "1
 const fail = (m) => { console.error("E2E FAIL: " + m); server.kill(); process.exit(1); };
 
 await new Promise((r) => setTimeout(r, 600));
-const browser = await chromium.launch({ args: ["--autoplay-policy=no-user-gesture-required"] });
+const browser = await chromium.launch({ args: launchArgs });
 
 try {
   const page = await browser.newPage();

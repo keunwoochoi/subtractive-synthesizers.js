@@ -1,6 +1,13 @@
 // Prove the arpeggiator actually arpeggiates: holding a chord must produce a stream of
 // SEPARATE notes over time, not one sustained cluster. "It didn't crash" is not a check.
-import { chromium } from "playwright";
+import * as pw from "playwright";
+const BROWSER = process.env.BROWSER ?? "chromium";
+// --autoplay-policy is a Chromium-only flag; Linux WebKit refuses to start when
+// handed an unknown option, while macOS WebKit ignored it. Hence green locally and
+// red on CI. Select flags per engine rather than passing one set to all of them.
+const launchArgs = BROWSER === "chromium"
+  ? ["--autoplay-policy=no-user-gesture-required"] : [];
+const chromium = pw[BROWSER];
 import { spawn } from "node:child_process";
 const PORT = 8187;
 
@@ -21,7 +28,7 @@ await requireFreePort(PORT);
 const server = spawn("python3", ["-m", "http.server", String(PORT), "--bind", "127.0.0.1"], { stdio: "ignore" });
 const fail = (m) => { console.error("ARP FAIL: " + m); server.kill(); process.exit(1); };
 await new Promise(r => setTimeout(r, 700));
-const b = await chromium.launch({ args: ["--autoplay-policy=no-user-gesture-required"] });
+const b = await chromium.launch({ args: launchArgs });
 try {
   const p = await b.newPage();
   const errs = [];
