@@ -10,6 +10,8 @@ export const PARAM = {
   chorusRate: 20, chorusDepth: 21, chorusMix: 22,
   delayMix: 23, delayTime: 24, delayFeedback: 25, delayTone: 26,
   reverbMix: 27, reverbSize: 28, reverbDamp: 29, reverbPredelay: 30,
+  unison: 31, glide: 32,
+  lfoRate: 33, lfoToPitch: 34, lfoToCutoff: 35, lfoToPwm: 36,
 };
 
 export const SHAPE = { saw: 0, pulse: 1, triangle: 2 };

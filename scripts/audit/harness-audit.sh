@@ -32,6 +32,10 @@ echo "== identity =="
 scripts/audit/check-identity.sh --warn
 
 echo
+echo "== CI at head =="
+scripts/audit/check-ci.sh || true
+
+echo
 echo "== proving the audit can fail =="
 run_tests scripts/audit/test_harness_audit.py
 

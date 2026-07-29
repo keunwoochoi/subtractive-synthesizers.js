@@ -3,7 +3,7 @@
 //! The signal path is fixed and curated (PRINCIPLES: "not a modular environment").
 //! What varies is the patch.
 
-use crate::filter::{tanh_fast, Ladder};
+use crate::filter::{tanh_fast, HalfBand, Ladder};
 use crate::flush_denormal;
 use crate::osc::{Noise, Osc, Shape};
 
@@ -92,9 +92,20 @@ impl Adsr {
 
 /// Patch parameters. PRINCIPLES #4: these are the controls players actually reach for,
 /// so they are one argument away rather than buried.
+/// Maximum unison width. Seven is the supersaw count, and it is the number because
+/// that is what the sound everyone means by "supersaw" actually has.
+pub const MAX_UNISON: usize = 7;
+
 #[derive(Clone, Copy)]
 pub struct Patch {
     pub shape: Shape,
+    pub unison: u32,
+    pub glide_s: f32,
+    /// LFO depths. Kept in the patch rather than the engine because how much vibrato a
+    /// sound wants is part of the sound, not part of the instrument.
+    pub lfo_pitch_cents: f32,
+    pub lfo_cutoff_hz: f32,
+    pub lfo_pwm: f32,
     pub pulse_width: f32,
     pub detune_cents: f32,
     pub sub_level: f32,
@@ -114,6 +125,11 @@ impl Patch {
     pub const fn init() -> Self {
         Patch {
             shape: Shape::Saw,
+            unison: 2,
+            glide_s: 0.0,
+            lfo_pitch_cents: 0.0,
+            lfo_cutoff_hz: 0.0,
+            lfo_pwm: 0.0,
             pulse_width: 0.5,
             detune_cents: 8.0,
             sub_level: 0.35,
@@ -135,9 +151,13 @@ pub struct Voice {
     pub note: u8,
     pub active: bool,
     pub age: u32,
-    osc_a: Osc,
-    osc_b: Osc,
+    osc: [Osc; MAX_UNISON],
     sub: Osc,
+    /// Decimator for the 2x-oversampled path.
+    hb: HalfBand,
+    /// Portamento state: where the pitch is now, and where it is heading.
+    f_now: f32,
+    glide_c: f32,
     noise: Noise,
     filter: Ladder,
     amp_env: Adsr,
@@ -156,9 +176,11 @@ impl Voice {
             note: 0,
             active: false,
             age: 0,
-            osc_a: Osc::new(),
-            osc_b: Osc::new(),
+            osc: [Osc::new(); MAX_UNISON],
             sub: Osc::new(),
+            hb: HalfBand::new(),
+            f_now: 440.0,
+            glide_c: 1.0,
             noise: Noise::new(1),
             filter: Ladder::new(),
             amp_env: Adsr::new(),
@@ -170,7 +192,8 @@ impl Voice {
         }
     }
 
-    pub fn start(&mut self, note: u8, vel: f32, patch: &Patch, sr: f32, seed: u32) {
+    pub fn start(&mut self, note: u8, vel: f32, patch: &Patch, sr: f32, seed: u32,
+                 glide_from: f32) {
         self.note = note;
         self.active = true;
         self.age = 0;
@@ -182,11 +205,25 @@ impl Voice {
         self.drift_cutoff = 1.0 + n.tick() * 0.06;
         self.noise = n;
 
-        self.osc_a.set_phase(0.5 * (n.tick() + 1.0));
-        self.osc_b.set_phase(0.5 * (n.tick() + 1.0));
+        // Random start phases: unison voices that begin aligned sum to a single loud
+        // click and then comb-filter each other instead of thickening.
+        for o in self.osc.iter_mut() {
+            o.set_phase(0.5 * (n.tick() + 1.0));
+        }
         self.sub.set_phase(0.0);
 
+        // Portamento. Starting from the previous note's pitch rather than the new one is
+        // the whole effect; a glide time of zero must still land exactly on pitch, hence
+        // the explicit 1.0 rather than a very large coefficient.
+        self.f_now = if patch.glide_s > 0.0001 && glide_from > 0.0 { glide_from } else { self.f0 };
+        self.glide_c = if patch.glide_s > 0.0001 {
+            1.0 - (-1.0 / (patch.glide_s * sr)).exp()
+        } else {
+            1.0
+        };
+
         self.filter.reset();
+        self.hb.reset();
         let (a, d, s, r) = patch.amp;
         self.amp_env.set(a, d, s, r, sr);
         let (fa, fd, fs, fr) = patch.flt;
@@ -194,14 +231,21 @@ impl Voice {
         self.amp_env.gate_on();
         self.flt_env.gate_on();
 
-        self.update_freqs(patch, sr);
+        self.update_freqs(patch, self.f_now, sr * 2.0);
     }
 
-    fn update_freqs(&mut self, patch: &Patch, sr: f32) {
-        let base = self.f0 * cents(self.drift_cents);
-        self.osc_a.set_freq(base * cents(-patch.detune_cents * 0.5), sr);
-        self.osc_b.set_freq(base * cents(patch.detune_cents * 0.5), sr);
-        self.sub.set_freq(base * 0.5, sr);
+    /// Spread `unison` oscillators evenly across +/- detune. `sr2` is the OVERSAMPLED
+    /// rate: the oscillators run at 2x and are decimated, which is what lifts the alias
+    /// ceiling PolyBLEP imposes on its own.
+    fn update_freqs(&mut self, patch: &Patch, base_hz: f32, sr2: f32) {
+        let n = (patch.unison.max(1) as usize).min(MAX_UNISON);
+        let base = base_hz * cents(self.drift_cents);
+        for i in 0..n {
+            // -1..1 across the stack; a single oscillator sits dead centre.
+            let t = if n == 1 { 0.0 } else { (i as f32 / (n - 1) as f32) * 2.0 - 1.0 };
+            self.osc[i].set_freq(base * cents(patch.detune_cents * 0.5 * t), sr2);
+        }
+        self.sub.set_freq(base * 0.5, sr2);
     }
 
     pub fn release(&mut self) {
@@ -209,33 +253,62 @@ impl Voice {
         self.flt_env.gate_off();
     }
 
+    /// Render one output sample. `lfo` is the shared LFO value in -1..1.
+    ///
+    /// The oscillators and filter run at 2x and are decimated here. Everything that
+    /// creates harmonics above the audible band -- the step discontinuities, the
+    /// saturated feedback -- gets an extra octave of room before it can fold back.
     #[inline]
-    pub fn tick(&mut self, patch: &Patch, sr: f32) -> f32 {
+    pub fn tick(&mut self, patch: &Patch, sr: f32, lfo: f32) -> f32 {
         if !self.active {
             return 0.0;
         }
-        let a = self.osc_a.tick(patch.shape, patch.pulse_width);
-        let b = self.osc_b.tick(patch.shape, patch.pulse_width);
-        let sub = self.sub.tick(Shape::Pulse, 0.5) * patch.sub_level;
-        let nz = if patch.noise_level > 0.0 {
-            self.noise.tick() * patch.noise_level
-        } else {
-            0.0
-        };
-        let mixed = (a + b) * 0.4 + sub * 0.5 + nz * 0.3;
+        let sr2 = sr * 2.0;
 
+        // Portamento and vibrato both act on frequency, so they are resolved together
+        // and the oscillator bank is retuned once per output sample rather than twice.
+        self.f_now += (self.f0 - self.f_now) * self.glide_c;
+        let vib = if patch.lfo_pitch_cents != 0.0 {
+            cents(lfo * patch.lfo_pitch_cents)
+        } else {
+            1.0
+        };
+        self.update_freqs(patch, self.f_now * vib, sr2);
+
+        let env = self.flt_env.tick();
+        let key = 1.0 + patch.key_track * (self.f0 / 261.63 - 1.0);
         // Velocity opens the filter as well as raising the level. This is THE defining
         // expressive gesture of subtractive synthesis -- harder playing must change
         // timbre, not only loudness.
-        let env = self.flt_env.tick();
-        let key = 1.0 + patch.key_track * (self.f0 / 261.63 - 1.0);
         let cutoff = (patch.cutoff_hz * key * self.drift_cutoff
             + env * patch.env_amount
-            + self.vel * patch.vel_to_cutoff)
-            .clamp(20.0, sr * 0.45);
-        self.filter.set(cutoff, patch.resonance, patch.drive, sr);
+            + self.vel * patch.vel_to_cutoff
+            + lfo * patch.lfo_cutoff_hz)
+            .clamp(20.0, sr2 * 0.45);
+        self.filter.set(cutoff, patch.resonance, patch.drive, sr2);
 
-        let filtered = self.filter.process(mixed);
+        let n = (patch.unison.max(1) as usize).min(MAX_UNISON);
+        // Constant-power-ish normalisation: seven detuned saws are not seven times
+        // louder than one, and scaling by 1/n would make wide unison disappear.
+        let norm = 0.8 / (n as f32).sqrt();
+        let pw = (patch.pulse_width + lfo * patch.lfo_pwm).clamp(0.05, 0.95);
+
+        let mut half = [0.0f32; 2];
+        for k in 0..2 {
+            let mut oscs = 0.0;
+            for i in 0..n {
+                oscs += self.osc[i].tick(patch.shape, pw);
+            }
+            let sub = self.sub.tick(Shape::Pulse, 0.5) * patch.sub_level;
+            let nz = if patch.noise_level > 0.0 {
+                self.noise.tick() * patch.noise_level
+            } else {
+                0.0
+            };
+            half[k] = self.filter.process(oscs * norm + sub * 0.5 + nz * 0.3);
+        }
+        let filtered = self.hb.decimate(half[0], half[1]);
+
         let amp = self.amp_env.tick();
         if self.amp_env.is_idle() {
             self.active = false;

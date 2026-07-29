@@ -100,12 +100,26 @@ def wasm_saw(f0: float, sr: float, n: int) -> np.ndarray:
             f"{_WASM} not built. Run: cargo build -p subtractive-dsp "
             f"--target wasm32-unknown-unknown --release")
     out = subprocess.run(
-        ["node", str(_RENDER), str(_WASM), str(f0), str(sr), str(n), "0"],
+        ["node", str(_RENDER), str(_WASM), str(f0), str(sr), str(n), "0", "1"],
         capture_output=True, check=True)
     return np.frombuffer(out.stdout, dtype="<f4").astype(float)
 
 
-HONEST = {"wasm_saw": wasm_saw, "polyblep_saw": polyblep_saw}
+def wasm_saw_no_oversampling(f0: float, sr: float, n: int) -> np.ndarray:
+    """The same oscillator with the oversampler bypassed.
+
+    Kept as a control so the alias figure attributable to oversampling is measured
+    rather than asserted -- "we added oversampling and the number improved" is only
+    evidence if the un-oversampled path is measured alongside it.
+    """
+    out = subprocess.run(
+        ["node", str(_RENDER), str(_WASM), str(f0), str(sr), str(n), "0", "0"],
+        capture_output=True, check=True)
+    return np.frombuffer(out.stdout, dtype="<f4").astype(float)
+
+
+HONEST = {"wasm_saw": wasm_saw, "wasm_saw_1x": wasm_saw_no_oversampling,
+          "polyblep_saw": polyblep_saw}
 NEGATIVE_CONTROL = {"naive_saw": naive_saw}
 CHEATS = {
     "cheat_silence": cheat_silence,

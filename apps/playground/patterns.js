@@ -25,6 +25,9 @@ export const PATTERNS = {
   "brass-stab": { steps: [
     {n:[52,59,64],a:1},null,null,{n:[52,59,64]},null,null,{n:[50,57,62],a:1},null,
     null,{n:[52,59,64]},null,null,{n:[55,62,67],a:1},null,null,null], gate: 0.5 },
+  "supersaw": { steps: [
+    {n:[64,71],a:1},null,null,{n:[64,71]},null,null,{n:[67,74],a:1},null,
+    null,null,{n:[62,69]},null,null,{n:[64,71],a:1},null,null], gate: 1.6 },
   "pluck": { steps: [
     {n:60,a:1},{n:67},{n:64},{n:72},{n:60},{n:67},{n:64},{n:76},
     {n:59,a:1},{n:65},{n:62},{n:71},{n:59},{n:65},{n:62},{n:67}], gate: 0.4 },

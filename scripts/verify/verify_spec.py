@@ -105,11 +105,16 @@ def hidden_grid(n: int = 10) -> list[tuple[float, float]]:
 # -47 dB at 28 Hz, -35 dB at 440 Hz, -27 dB at 2.2 kHz. So -35 dB is NOT achievable by
 # PolyBLEP alone above about A440, which is an architectural finding, not a tuning
 # detail -- see the oversampling discussion in the architecture doc.
-# -20 dB is the M1 floor: it rejects the naive ramp by 7 dB and passes PolyBLEP by 7 dB,
-# so it discriminates implementations with margin on both sides. It is deliberately a
-# FLOOR and not a quality bar, and it must be tightened when oversampling lands.
+# TIGHTENED at M2, when oversampling landed, exactly as the M1 note said it should be.
+# Measured worst case on the hidden grid:
+#   naive ramp -11.5 dB | PolyBLEP 1x -27.0 dB | shipped, 2x oversampled -31.4 dB
+# -25 dB passes the shipped path by 6.4 dB and rejects the naive ramp by 13.5 dB.
+# The gate is deliberately NOT set at -30: a threshold a passing implementation clears
+# by 1 dB turns every unrelated change into a coin flip. The improvement oversampling
+# actually buys is protected by an explicit >= 3 dB assertion in test_verify_spec.py
+# instead, which is a regression check rather than a knife edge.
 GATES = {
-    "alias_db": ("<=", -20.0, "inharmonic energy, worst case"),
+    "alias_db": ("<=", -25.0, "inharmonic energy, worst case"),
     "harmonic_err_db": ("<=", 6.0, "partial structure vs prototype, worst case"),
     "tuning_cents": ("<=", 5.0, "pitch error, worst case"),
     "peak": ("<=", 1.5, "no runaway"),

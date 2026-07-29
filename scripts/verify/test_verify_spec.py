@@ -29,6 +29,20 @@ class TestHarnessDiscriminates(unittest.TestCase):
         self.assertTrue(r["pass_hidden"],
                         f"the intended implementation was rejected: {r['fails']}")
 
+    def test_oversampling_measurably_improves_alias(self):
+        """The 2x path must beat the 1x path, by a margin, on the shipped oscillator.
+
+        Without this, "we added oversampling" is an assertion. The first implementation
+        of the decimator made alias 17 dB WORSE and still ran, sounded plausible, and
+        passed every other check -- only the side-by-side number caught it.
+        """
+        os2 = V.run("wasm_saw", C.wasm_saw)
+        os1 = V.run("wasm_saw_1x", C.wasm_saw_no_oversampling)
+        gain = os1["hidden"]["alias_db"] - os2["hidden"]["alias_db"]
+        self.assertGreater(gain, 3.0,
+                           f"oversampling bought only {gain:.1f} dB of alias suppression")
+        self.assertTrue(os2["pass_hidden"], f"shipped path rejected: {os2['fails']}")
+
     def test_negative_control_is_rejected(self):
         """A raw phase ramp must fail. If it does not, the alias gate measures nothing."""
         r = V.run("naive_saw", C.naive_saw)

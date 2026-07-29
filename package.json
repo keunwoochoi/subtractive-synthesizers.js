@@ -18,7 +18,8 @@
     "e2e": "node scripts/dev/e2e-check.mjs",
     "dev": "scripts/dev/serve.sh",
     "verify:engine": "node scripts/verify/check_engine.mjs",
-    "bench": "node scripts/verify/dsp_bench.mjs"
+    "bench": "node scripts/verify/dsp_bench.mjs",
+    "check:ci": "scripts/audit/check-ci.sh"
   },
   "devDependencies": {
     "playwright": "^1.62.0"

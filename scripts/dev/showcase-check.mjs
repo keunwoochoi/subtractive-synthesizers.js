@@ -13,8 +13,13 @@ try {
   p.on("console", m => { if (m.type() === "error") errs.push(m.text()); });
   await p.goto(`http://localhost:${PORT}/apps/playground/showcase.html`, { timeout: 15000 });
 
+  // Derived from the preset bank, not hardcoded: a magic number here means adding a
+  // patch silently stops being verified. Caught when the supersaw took the count to 7
+  // and the check still asserted 6.
+  const { PRESETS } = await import("../../packages/core/src/presets.js");
+  const expected = Object.keys(PRESETS).length;
   const cards = await p.locator(".card").count();
-  if (cards < 6) fail(`expected 6 patch cards, found ${cards}`);
+  if (cards !== expected) fail(`expected ${expected} patch cards, found ${cards}`);
 
   await p.click("#play");
   await p.waitForFunction(() => document.getElementById("sr").textContent !== "—",
@@ -51,5 +56,5 @@ try {
 
   if (errs.length) fail("page errors: " + errs.slice(0, 3).join(" | "));
   console.log("showcase:", JSON.stringify({ ...state, peakVoices }));
-  console.log("SHOWCASE OK — 6 patches, transport runs, size measured in-page, patch switching clean");
+  console.log(`SHOWCASE OK — ${expected} patches, transport runs, size measured in-page, patch switching clean`);
 } finally { await b.close(); server.kill(); }

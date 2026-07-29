@@ -13,6 +13,8 @@ const shape = Number(shapeArg ?? 0);
 const { instance } = await WebAssembly.instantiate(readFileSync(wasmPath), {});
 const x = instance.exports;
 const eng = x.engine_new(sr);
+const os = process.argv[7] === undefined ? 1 : Number(process.argv[7]);
+if (x.probe_oversample) x.probe_oversample(eng, os);
 x.probe_reset(eng);
 
 const BLOCK = 128;

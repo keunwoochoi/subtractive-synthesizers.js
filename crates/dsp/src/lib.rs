@@ -45,6 +45,15 @@ pub struct Engine {
     /// than the oscillator.
     probe: osc::Osc,
     probe_hz: f32,
+    probe_hb: filter::HalfBand,
+    probe_os: bool,
+    /// Shared LFO. One per engine, as on most vintage synths -- a per-voice LFO makes a
+    /// chord shimmer incoherently instead of moving together.
+    lfo_phase: f32,
+    lfo_rate: f32,
+    /// Pitch of the last note started, so portamento has somewhere to glide FROM.
+    last_f0: f32,
+    lfo_buf: [f32; MAX_BLOCK],
     chorus: Chorus,
     chorus_rate: f32,
     chorus_depth: f32,
@@ -73,6 +82,12 @@ impl Engine {
             out: [0.0; MAX_BLOCK],
             probe: osc::Osc::new(),
             probe_hz: -1.0,
+            probe_hb: filter::HalfBand::new(),
+            probe_os: true,
+            lfo_phase: 0.0,
+            lfo_rate: 5.0,
+            last_f0: 0.0,
+            lfo_buf: [0.0; MAX_BLOCK],
             chorus: Chorus::new(),
             chorus_rate: 0.6,
             chorus_depth: 3.0,
@@ -94,7 +109,8 @@ impl Engine {
         // Retrigger an existing voice for the same note rather than stacking two.
         if let Some(i) = self.voices.iter().position(|v| v.active && v.note == note) {
             self.seed = self.seed.wrapping_mul(1664525).wrapping_add(1013904223);
-            self.voices[i].start(note, vel, &self.patch, self.sr, self.seed);
+            self.voices[i].start(note, vel, &self.patch, self.sr, self.seed, self.last_f0);
+            self.last_f0 = voice::midi_to_hz(note as f32);
             return;
         }
         let idx = self
@@ -112,7 +128,8 @@ impl Engine {
                 oldest
             });
         self.seed = self.seed.wrapping_mul(1664525).wrapping_add(1013904223);
-        self.voices[idx].start(note, vel, &self.patch, self.sr, self.seed);
+        self.voices[idx].start(note, vel, &self.patch, self.sr, self.seed, self.last_f0);
+        self.last_f0 = voice::midi_to_hz(note as f32);
     }
 
     pub fn note_off(&mut self, note: u8) {
@@ -150,12 +167,28 @@ impl Engine {
         for s in self.out[..n].iter_mut() {
             *s = 0.0;
         }
+
+        // The LFO is evaluated ONCE per block into a scratch buffer, then read by every
+        // voice. Recomputing it inside the per-voice loop would advance its phase once
+        // per voice, so a chord would modulate faster than a single note -- a bug that
+        // only appears with polyphony and sounds like the LFO rate is unstable.
+        let inc = self.lfo_rate / self.sr;
+        for i in 0..n {
+            self.lfo_phase += inc;
+            if self.lfo_phase >= 1.0 {
+                self.lfo_phase -= 1.0;
+            }
+            // Triangle: cheaper than a sine and the classic modulation shape anyway.
+            let t = self.lfo_phase;
+            self.lfo_buf[i] = if t < 0.5 { 4.0 * t - 1.0 } else { 3.0 - 4.0 * t };
+        }
+
         for v in self.voices.iter_mut() {
             if !v.active {
                 continue;
             }
-            for s in self.out[..n].iter_mut() {
-                *s += v.tick(&self.patch, self.sr);
+            for i in 0..n {
+                self.out[i] += v.tick(&self.patch, self.sr, self.lfo_buf[i]);
             }
         }
         if self.chorus.is_active() {
@@ -307,6 +340,12 @@ pub unsafe extern "C" fn set_param(p: *mut Engine, id: u32, v: f32) {
         28 => { e.rev_size = v; e.sync_reverb(); }
         29 => { e.rev_damp = v; e.sync_reverb(); }
         30 => { e.rev_predelay = v; e.sync_reverb(); }
+        31 => e.patch.unison = (v as u32).clamp(1, voice::MAX_UNISON as u32),
+        32 => e.patch.glide_s = v.max(0.0),
+        33 => e.lfo_rate = v.clamp(0.01, 20.0),
+        34 => e.patch.lfo_pitch_cents = v,
+        35 => e.patch.lfo_cutoff_hz = v,
+        36 => e.patch.lfo_pwm = v,
         _ => {}
     }
 }
@@ -321,16 +360,40 @@ pub unsafe extern "C" fn set_param(p: *mut Engine, id: u32, v: f32) {
 pub unsafe extern "C" fn render_osc(p: *mut Engine, hz: f32, shape: u32, frames: u32) {
     let e = eng!(p);
     let n = (frames as usize).min(MAX_BLOCK);
+    // Match the SHIPPED signal path by default. A probe that renders the oscillator at
+    // 1x measures a path no listener ever hears once voices run oversampled, and the
+    // alias gate would then be grading something the product does not contain.
+    let rate = if e.probe_os { e.sr * 2.0 } else { e.sr };
     if e.probe_hz != hz {
         e.probe_hz = hz;
-        e.probe.set_freq(hz, e.sr);
+        e.probe.set_freq(hz, rate);
     }
     let sh = Shape::from_u32(shape);
-    let sr = e.sr;
-    let _ = sr;
-    for i in 0..n {
-        e.out[i] = e.probe.tick(sh, 0.5);
+    if e.probe_os {
+        for i in 0..n {
+            let a = e.probe.tick(sh, 0.5);
+            let b = e.probe.tick(sh, 0.5);
+            e.out[i] = e.probe_hb.decimate(a, b);
+        }
+    } else {
+        for i in 0..n {
+            e.out[i] = e.probe.tick(sh, 0.5);
+        }
     }
+}
+
+/// Choose whether the probe mirrors the shipped oversampled path (default) or renders
+/// the bare oscillator. Both are worth measuring: one is what ships, the other isolates
+/// how much of the improvement the oversampler is responsible for.
+///
+/// # Safety
+/// `p` must be a live pointer from `engine_new`.
+#[no_mangle]
+pub unsafe extern "C" fn probe_oversample(p: *mut Engine, on: u32) {
+    let e = eng!(p);
+    e.probe_os = on != 0;
+    e.probe_hz = -1.0;
+    e.probe_hb.reset();
 }
 
 /// Restart the measurement oscillator's phase. Called once before a probe run.
@@ -342,4 +405,5 @@ pub unsafe extern "C" fn probe_reset(p: *mut Engine) {
     let e = eng!(p);
     e.probe = osc::Osc::new();
     e.probe_hz = -1.0;
+    e.probe_hb.reset();
 }

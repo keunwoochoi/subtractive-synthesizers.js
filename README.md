@@ -22,12 +22,12 @@ and that difference decides how the whole project verifies its work.
 <!-- generated:bundle -->
 | artifact | raw | gzipped |
 |---|---:|---:|
-| `packages/core/wasm/subtractive_dsp.wasm` | 67,396 B | 26,681 B |
-| `packages/core/src/index.js` | 3,005 B | 1,509 B |
+| `packages/core/wasm/subtractive_dsp.wasm` | 70,976 B | 27,807 B |
+| `packages/core/src/index.js` | 3,092 B | 1,550 B |
 | `packages/core/worklet/processor.js` | 4,616 B | 1,873 B |
-| **total** | | **30,063 B (29.4 KB)** |
+| **total** | | **31,230 B (30.5 KB)** |
 
-Budget is 60 KB gzipped for the whole library — currently **48%**.
+Budget is 60 KB gzipped for the whole library — currently **50%**.
 <!-- /generated:bundle -->
 
 ## Cost
@@ -36,8 +36,8 @@ Budget is 60 KB gzipped for the whole library — currently **48%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **3.5 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 28.6x |
+| audio-thread budget used | **8.1 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 12.4x |
 <!-- /generated:bench -->
 
 Measured on the machine that regenerated this table, with the voice pool saturated and
@@ -59,7 +59,8 @@ Every oscillator is graded against that prototype, worst-case across a grid, on 
 <!-- generated:verdicts -->
 | candidate | alias dB | harmonic err | verdict |
 |---|---:|---:|---|
-| `wasm_saw` | -27.0 | 3.8 | **PASS** |
+| `wasm_saw` | -31.4 | 2.7 | **PASS** |
+| `wasm_saw_1x` | -27.0 | 3.8 | **PASS** |
 | `polyblep_saw` | -27.0 | 3.8 | **PASS** |
 | `naive_saw` | -11.5 | 0.8 | REJECT |
 | `cheat_silence` | inf | inf | REJECT |
@@ -117,7 +118,7 @@ which is the only thing that lets the work finish.
 | | |
 |---|---|
 | harness audit assertions | 24 |
-| fail-correctly tests | 17 |
+| fail-correctly tests | 18 |
 | deliberately-broken fixtures | 7 |
 <!-- /generated:harness-stats -->
 
