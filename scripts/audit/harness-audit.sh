@@ -7,6 +7,25 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
+# Show the last few lines when a suite passes, and EVERYTHING when it fails. The first
+# version piped through `tail -3` unconditionally, which meant the one time it mattered
+# -- a missing dependency on CI -- the traceback naming the module was cut off and the
+# log showed only "exit code 1".
+run_tests() {
+  local out
+  if out=$(python3 "$1" 2>&1); then
+    printf '%s\n' "$out" | tail -3
+  else
+    printf '%s\n' "$out"
+    if grep -q ModuleNotFoundError <<<"$out"; then
+      echo
+      echo "Missing a dev dependency. Install with:"
+      echo "    pip install -r scripts/requirements-dev.txt"
+    fi
+    return 1
+  fi
+}
+
 echo "== identity =="
 # First, because a wrong GitHub identity is the one harness failure that publishes
 # something the owner then has to delete. Everything else is recoverable in-repo.
@@ -14,11 +33,11 @@ scripts/audit/check-identity.sh --warn
 
 echo
 echo "== proving the audit can fail =="
-python3 scripts/audit/test_harness_audit.py 2>&1 | tail -3
+run_tests scripts/audit/test_harness_audit.py
 
 echo
 echo "== proving verify-spec rejects cheats =="
-python3 scripts/verify/test_verify_spec.py 2>&1 | tail -3
+run_tests scripts/verify/test_verify_spec.py
 
 echo
 echo "== patch intents (PRINCIPLES #2) =="

@@ -9,6 +9,13 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      # The verification harness measures spectra, so it needs numpy. The runner does
+      # not ship it: this step exists because CI went red on ModuleNotFoundError while
+      # every local run was green.
+      - run: pip install -r scripts/requirements-dev.txt
       - name: Harness audit (proves it can fail, then audits the repo)
         run: scripts/audit/harness-audit.sh
       - name: Bundle ceiling
