@@ -245,7 +245,8 @@ material, so the report does not need to.
 **2. Docs drifted from code, silently, in three separate places.** The README claimed 13 instruments
 and ~31 KB when reality was 29 and 85.4 KB. `AGENTS.md`'s repo map claimed `packages/midi` owns a
 scheduler and Web MIDI — the scheduler is in `packages/core` and Web MIDI does not exist anywhere.
-The architecture doc described an SoA voice bank that was never built (their own #62 records this).
+The architecture doc described an SoA voice bank that was never built (issue #62 in that repo
+records this).
 → **`harness-audit` gains a doc-vs-code check.** Any number in a doc must carry a marker naming the
 script that owns it; unmarked numbers fail the audit. Structural claims about the repo layout are
 checked against the tree.
@@ -308,25 +309,87 @@ empty build:
 11. The report scaffold, with generated-number discipline wired in.
 12. Single-source id generation, proven by the fake-synth test.
 
-## Open forks — the ones I cannot decide for you
+## Resolved — owner decisions, 2026-07-28
 
-1. **Who is the ear?** Owner-only, or a small listener panel for release gates? The sibling used owner
-   ear plus seven personas; five of those port nearly verbatim. My recommendation: **owner-only for
-   per-patch iteration** (fast, and taste is the product), **personas as a pre-owner filter** to catch
-   the obvious, and the producer persona's ten-second dismissal test kept as the headline gate — it
-   is arguably more apt for a synth library than it was for acoustic instruments.
-2. **Report cadence.** Living document updated every session is real overhead. My recommendation:
-   **journey log every session** (cheap, append-only, raw) and **report refreshed at each milestone**
-   from that log with generated numbers. You get the write-up without paying a documentation tax on
-   every commit.
-3. **How hard is the alias gate?** A number has to go in CI. I would rather propose it after M1
-   measures what PolyBLEP actually delivers on our oscillators than pick a threshold now and have it
-   be either theatre or a blocker. **Proposal: M1 measures, then we set it.**
-4. **Does the roster get intent statements up front, or one at a time?** Writing all eight before any
-   tuning is more honest and catches overlap early; writing them lazily is faster. I lean **all eight
-   up front, briefly** — they are a paragraph each and they define the product.
-5. **Does `dsp-bench`'s multi-track arrangement gate carry over unchanged?** The sibling's desktop-first
-   M1 gate (32 voices, ≥4 tracks, ≤50 % of 2.67 ms) is inherited in the architecture doc. Supersaw at
-   seven oscillators per voice is a materially heavier case than anything the sibling benchmarks.
-   Worth deciding whether 32 voices is still the right number, or whether the unit should be
-   "eight-voice supersaw plus a rhythm section."
+All five open forks were closed in one exchange. Recorded here rather than in chat, per the decision
+table above.
+
+1. **Who is the ear — settled: owner-only for iteration, personas as a pre-filter.** Owner: *"ear -
+   yes."* Per-patch decisions are the owner's alone; the persona panel runs ahead of the owner to
+   catch the obvious and save their attention; the producer persona's ten-second dismissal test is
+   the headline gate.
+2. **Report cadence — settled: journey log per session, report per milestone.** Owner: *"report - ok
+   good. we can also update the report later anyway."* Note the second clause is only safe because
+   every number in the report is generated rather than typed — updating later is cheap precisely
+   because nothing is remembered by hand. That is the lesson from the sibling's stale draft, and it
+   is what makes this cadence affordable.
+3. **Alias gate threshold — settled: M1 measures, then we set it.** Owner: *"ok cool."* Picking a
+   number before measuring PolyBLEP's real behaviour on our oscillators would produce either theatre
+   or a blocker.
+4. **Intent statements — schema and one worked example land in M0; the all-at-once-vs-lazy question
+   defers to M3.** Owner: *"idk wdym, sounds like we can decide it later."* The confusion was the
+   author's fault: the fork was posed before an example existed. The worked example below is the
+   answer, and the scheduling question genuinely is an M3 concern, not an M0 one.
+5. **Bench gate — settled by delegation.** Owner: *"who is 'their'?? idk you can decide."* Decision
+   in the next section. (The owner's first clause is a fair hit on the author's prose: this document
+   had been saying "their" for `physical-instruments.js`, which reads as a third party when the owner
+   owns both repos. Corrected throughout to "the sibling" or the repo name.)
+
+### Decision: the bench gate's unit changes from voice count to a named arrangement
+
+**A voice count is a meaningless unit for this library.** In `physical-instruments.js`, one voice is
+approximately one voice's worth of work. Here, a supersaw voice is seven oscillators and a mono bass
+voice is two — a 3.5× spread inside the same number. Gating on "32 voices" would let us pass with 32
+cheap voices and ship something that stutters on the patch people actually want.
+
+So the gate keeps the sibling's **budget** (≤ 50 % of 2.67 ms / 128 frames) and its **desktop-first
+framing** (M1 desktop gates; mobile is a degradation target and estimated mobile numbers are never
+presented as budget rows), and replaces the **unit** with a named reference arrangement that
+contains the worst case by construction: a supersaw pad, a bass, a polyphonic pluck, and a drum kit,
+playing simultaneously.
+
+The exact voice counts in that arrangement are set at **M1, alongside the alias threshold**, for the
+same reason — per-voice cost with oversampling is unmeasured today, and a number invented now would
+be either trivially passable or impossible. What is decided now is the *form* of the gate; the
+*number* follows the measurement.
+
+## Worked example — what a patch intent statement actually is
+
+Written **before** any DSP tuning for that patch. This is the artifact referred to throughout, and
+it is the answer to a fork that was posed before an example existed.
+
+> ### Patch intent: `acid-bass`
+>
+> **For:** driving sixteenth-note basslines. The sound everyone recognises from a 303, without
+> saying so on the tin.
+>
+> **In words:** squelchy and aggressive. *The filter is the instrument* — when resonance is up, the
+> resonant peak should be more prominent than the fundamental. Dies fast and dry: no tail, no
+> reverb. Sits low, and cuts through a mix without being turned up.
+>
+> **The one committed target (not an average):** the aggressive end. If forced to choose between
+> "smooth and usable across many genres" and "unmistakably acid," choose acid. A version of this
+> patch that offends nobody has failed.
+>
+> | # | Measurable target | Which phrase above it comes from |
+> |---|---|---|
+> | 1 | Amplitude decays to −60 dB within 400 ms at the default envelope | "dies fast and dry" |
+> | 2 | At resonance ≥ 0.8, the spectral peak at *f_c* exceeds the *f₀* partial by ≥ 6 dB | "the filter is the instrument" |
+> | 3 | Spectral centroid rises ≥ 1.5× from velocity 40 → 110 | accent behaviour |
+> | 4 | At MIDI 36, ≥ 70 % of energy sits between 40–120 Hz | "sits low" |
+> | 5 | Alias energy meets the Tier-1 gate with resonance **and** drive both at maximum | the hardest alias case this patch can produce |
+
+Three things this buys, which are the whole argument for the artifact:
+
+- Targets 1–4 are **Tier-2 measurements that did not exist until the prose was written down.** They
+  are derived from the sentences, not invented independently — each row names its source phrase, so
+  the chain from taste to number is auditable.
+- Target 5 exists because writing the intent forced the question *"what is this patch's worst alias
+  case?"* before the DSP was written, rather than after a listener noticed something fizzing.
+- The "one committed target" line is the falsifiable part. Six months later, "we made it smoother
+  and more versatile" is visibly a **failure against the stated intent**, not a neutral change of
+  direction — and if it is genuinely the right call, the intent gets amended in the open with a
+  reason.
+
+The schema and this example ship in M0. **Whether all eight roster patches get their intents written
+up front or one at a time is an M3 question and is deferred** — it does not block anything earlier.

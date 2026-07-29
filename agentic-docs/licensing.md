@@ -1,0 +1,67 @@
+# Licensing ledger & clean-room policy
+
+subtractive-synthesizers.js is dual-licensed **MIT OR Apache-2.0** (user's choice, Rust-ecosystem
+convention). The permissive license is part of the product. This file is the single owner of porting
+policy, trademark policy, and provenance.
+
+## Clean-room policy (papers-only for copyleft)
+
+- **Permissive sources (MIT/BSD/similar): port freely.** Every ported file gets a ledger entry below
+  and a header comment naming origin + license.
+- **Copyleft sources (GPL/LGPL/AGPL): NEVER open the source.** Not "read for understanding" — never
+  open. Algorithms from copyleft projects are reimplemented from published papers only. If you catch
+  yourself with copyleft source in context, stop, note it in the incident log, and hand the
+  implementation to a fresh context that has not seen it.
+
+## Trademark policy — the live risk in this domain
+
+Unlike the sibling project, our porting exposure is low (the algorithms are textbook) and our
+**trademark** exposure is high, because every classic subtractive sound is associated with a
+protected name.
+
+**The marks of famous synthesizers and drum machines may not appear in preset names, public API
+surface, documentation, or marketing copy.** This includes but is not limited to Moog, Minimoog,
+Juno, Jupiter, TB-303, TR-808, TR-909, Prophet, Oberheim, OB-Xa, Solina, and JP-8000.
+
+**Describe the sound, never the machine.** `acid-bass`, not `303-bass`. "Ladder filter" is a
+technical term for a topology and is fine; "Moog ladder" in shipped copy is not. Internal design
+docs may name hardware when discussing prior art — shipped surfaces may not.
+
+The underlying patents are not a concern: the original transistor-ladder patent (filed 1966, granted
+1969) expired in the 1980s and the topology is long in the public domain.
+
+## Approved reference sources (papers and books — reimplementation, not porting)
+
+| Source | License / status | What we may take |
+|---|---|---|
+| Zavalishin, *The Art of VA Filter Design* (rev. 2.1.2, 2020) | Freely copyable in full, unmodified — verified 2026-07-28. A **book**, not source code | Topology-preserving transform / zero-delay-feedback filter design: ladder, SVF, nonlinearities, trapezoidal integration. The primary filter reference |
+| Huovilainen, "Non-linear digital implementation of the Moog ladder filter" (DAFx-04) | Published paper | The tanh-per-stage nonlinear ladder model |
+| Välimäki & Huovilainen, BLIT/BLEP oscillator literature | Published papers | PolyBLEP and related band-limited step corrections |
+| Smith, *Physical Audio Signal Processing* (CCRMA, online) | Published | General DSP background |
+
+## Surveyed and NOT adopted
+
+Recorded so these are not re-surveyed every few months.
+
+| Thing | Verdict | Why |
+|---|---|---|
+| Reference corpora of analog synth multi-samples | **None usable found** (survey 2026-07-28) | No verified CC0 or CC-BY corpus exists. The analog world offers "royalty-free", which is marketing, not a license. `modularsamples.com` was the one plausible CC0 lead and **could not be verified — the site did not resolve to readable content.** Any future use requires a license check first |
+| SpiegeLib (`github.com/spiegelib/spiegelib`) | **Surveyed, not adopted** | MIT-licensed Python library for *automatic synthesizer programming*; implements MFCC-based objective evaluation alongside a MUSHRA subjective class. Not adopted: it is VST/RenderMan-oriented, TensorFlow-heavy, and its purpose is **matching a target sound**, which `PRINCIPLES.md` rejects as our quality mechanism. Noted as prior art — its side-by-side objective/subjective split is mild independent support for our two-loop design |
+
+Reference audio, if ever used for calibration spot-checks, is **scratchpad only, never committed**,
+and its license is verified before use.
+
+## Port ledger
+
+Every ported file: `| path | origin file | origin license | date | PR | notes |`
+
+| path | origin | license | date | PR | notes |
+|---|---|---|---|---|---|
+| _(none yet)_ | | | | | |
+
+Plumbing lifted from `physical-instruments.js` (same owner, MIT OR Apache-2.0) is recorded here with
+its exact source SHA when it lands, so the later shared-core extraction has a clean diff.
+
+## Incident log
+
+_(none)_
