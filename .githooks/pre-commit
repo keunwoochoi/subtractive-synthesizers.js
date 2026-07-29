@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Direct commits to main are permitted during bootstrap (PRINCIPLES.md amendment 1.1.0).
+# The harness audit is not optional either way.
+set -euo pipefail
+exec scripts/audit/harness-audit.sh

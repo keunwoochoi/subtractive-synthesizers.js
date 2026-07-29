@@ -1,0 +1,13 @@
+{
+  "name": "subtractive-synthesizers.js-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Analog-style subtractive synthesizers for the browser — monorepo root",
+  "type": "module",
+  "license": "MIT OR Apache-2.0",
+  "scripts": {
+    "audit:harness": "scripts/audit/harness-audit.sh",
+    "audit:bundle": "scripts/audit/bundle-size-audit.sh",
+    "test:harness": "python3 scripts/audit/test_harness_audit.py"
+  }
+}

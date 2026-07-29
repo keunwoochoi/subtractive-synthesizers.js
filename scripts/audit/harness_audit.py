@@ -1,0 +1,207 @@
+#!/usr/bin/env python3
+"""Audit the agent harness itself. Stdlib only, no dependencies, always terminates.
+
+Every check here exists because a specific rule in AGENTS.md or PRINCIPLES.md would
+otherwise be enforced by memory, and instruction files are context rather than
+configuration -- under pressure, prose gets ignored. See
+agentic-docs/design/2026-07-28-harness-evidence.md for the evidence behind each.
+
+Run against the repo:            python3 scripts/audit/harness_audit.py
+Run against a fixture (expect failure):
+                                 python3 scripts/audit/harness_audit.py --root scripts/audit/fixtures/<name>
+"""
+
+from __future__ import annotations
+
+import argparse
+import re
+import sys
+from dataclasses import dataclass, field
+from pathlib import Path
+
+# The always-on operating surface. Paths cited here MUST exist -- these files are
+# injected into every session, so a stale reference misleads on every task.
+OPERATING_SURFACE = ("AGENTS.md", "PRINCIPLES.md")
+
+# Budgets. Sources: Claude Code docs (<200 lines), Windsurf (12k chars total),
+# Aider CONVENTIONS.md (150-200 lines). Deliberately a failing check, not an aspiration.
+MAX_LINES = {"AGENTS.md": 150, "PRINCIPLES.md": 150}
+MAX_TOTAL_CHARS = 24_000
+
+# A measurement belongs in the script that measures it, never in the constitution.
+# Version numbers, dates and maths (1/k) must not trip this.
+DERIVED_NUMBER = re.compile(
+    r"\b\d[\d,._]*\s?(KB|MB|GB|kB|ms|µs|us|Hz|kHz|dB|dBFS|LUFS|%|voices|frames|bytes)\b"
+)
+
+PATHISH = re.compile(r"`([^`\n]+)`")
+MD_LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
+CLARIFY = re.compile(r"\[NEEDS CLARIFICATION[^\]]*\]")
+TODO = re.compile(r"\b(TODO|FIXME|XXX)\b\s*[:(]")
+SEMVER_HEADER = re.compile(r"^\*\*Version (\d+\.\d+\.\d+)\*\*.*Ratified (\d{4}-\d{2}-\d{2})", re.M)
+AMENDMENT_HEAD = re.compile(r"^### (\d+\.\d+\.\d+) — (\d{4}-\d{2}-\d{2}) — (.+)$", re.M)
+
+
+@dataclass
+class Report:
+    failures: list[str] = field(default_factory=list)
+    checks_run: int = 0
+
+    def check(self, ok: bool, ident: str, detail: str) -> None:
+        self.checks_run += 1
+        if not ok:
+            self.failures.append(f"{ident}: {detail}")
+
+
+def looks_like_path(tok: str) -> bool:
+    """Backticked tokens that are plausibly repo paths. Conservative on purpose:
+    a false positive here blocks a commit, so we only claim the obvious cases."""
+    if " " in tok or tok.startswith(("http", "@", "$", "-", "npm ", "git ")):
+        return False
+    if tok.endswith("/"):
+        return True
+    if "/" in tok and re.search(r"\.(md|sh|py|toml|json|rs|ts|js|mjs|yml|yaml)$", tok):
+        return True
+    return bool(re.fullmatch(r"[A-Z]+\.md", tok))
+
+
+def read(p: Path) -> str:
+    try:
+        return p.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ""
+
+
+def audit(root: Path) -> Report:
+    r = Report()
+    # Exclusions are relative to root: when auditing a fixture, `root` is itself inside
+    # scripts/audit/fixtures/, and matching on absolute parts would exclude every doc and
+    # silently disable the checks. (Caught by test_harness_audit.py on the first run.)
+    def excluded(p: Path) -> bool:
+        rel = p.relative_to(root).parts
+        return ".git" in rel or "fixtures" in rel
+
+    docs = sorted(p for p in root.rglob("*.md") if not excluded(p))
+
+    # --- C1/C3: every path cited on the always-on surface exists, and every directory
+    # it names is genuinely populated. A directory that exists implies it is real;
+    # intent goes in an issue, never in an empty folder.
+    for name in OPERATING_SURFACE:
+        f = root / name
+        if not f.exists():
+            r.check(False, "C1-PATHS", f"{name} is missing from the operating surface")
+            continue
+        text = read(f)
+        # Lines that explicitly declare something absent are exempt and must say so.
+        exempt = {i for i, ln in enumerate(text.splitlines())
+                  if re.search(r"does not exist|not exist yet|M0 item", ln, re.I)}
+        for i, line in enumerate(text.splitlines()):
+            if i in exempt:
+                continue
+            for tok in PATHISH.findall(line):
+                if not looks_like_path(tok):
+                    continue
+                target = root / tok.rstrip("/")
+                if not target.exists():
+                    r.check(False, "C1-PATHS", f"{name}:{i+1} cites `{tok}` which does not exist")
+                elif target.is_dir():
+                    real = [c for c in target.rglob("*") if c.is_file() and c.name != ".gitkeep"]
+                    r.check(bool(real), "C3-NONEMPTY",
+                            f"{name}:{i+1} cites directory `{tok}` but it holds no real files")
+
+    # --- C2: markdown links to local files resolve, across every doc.
+    for d in docs:
+        for i, line in enumerate(read(d).splitlines()):
+            for href in MD_LINK.findall(line):
+                if href.startswith(("http", "#", "mailto:")):
+                    continue
+                tgt = (d.parent / href.split("#", 1)[0]).resolve()
+                r.check(tgt.exists(), "C2-LINKS",
+                        f"{d.relative_to(root)}:{i+1} links to {href} which does not resolve")
+
+    # --- C4/C5: context budget, and deep header structure. Volume without granularity
+    # is the declining-project profile (arXiv 2606.13449).
+    total = 0
+    for name, cap in MAX_LINES.items():
+        f = root / name
+        if not f.exists():
+            continue
+        text = read(f)
+        total += len(text)
+        n = len(text.splitlines())
+        r.check(n <= cap, "C4-BUDGET", f"{name} is {n} lines, over its {cap}-line budget")
+        h3 = len(re.findall(r"^### ", text, re.M))
+        r.check(h3 >= 3, "C5-STRUCTURE",
+                f"{name} has {h3} H3 headings; deep structure correlates with agent success")
+    r.check(total <= MAX_TOTAL_CHARS, "C4-BUDGET",
+            f"always-on context is {total} chars, over the {MAX_TOTAL_CHARS} budget")
+
+    # --- C6: the constitution is versioned and every amendment propagates.
+    prin = root / "PRINCIPLES.md"
+    if prin.exists():
+        text = read(prin)
+        r.check(bool(SEMVER_HEADER.search(text)), "C6-CONSTITUTION",
+                "PRINCIPLES.md lacks a '**Version X.Y.Z** ... Ratified YYYY-MM-DD' header")
+        amendments = AMENDMENT_HEAD.findall(text)
+        r.check(bool(amendments), "C6-CONSTITUTION", "PRINCIPLES.md has no amendment record")
+        # Every amendment above the initial ratification must name what it propagates to.
+        blocks = re.split(r"^### (?=\d+\.\d+\.\d+ — )", text, flags=re.M)[1:]
+        for b in blocks:
+            ver = b.split(" ", 1)[0]
+            if ver.endswith(".0.0") and "Ratified" in b.split("\n")[0]:
+                continue
+            if re.match(r"1\.0\.0", ver):
+                continue
+            r.check("Sync Impact Report" in b, "C6-CONSTITUTION",
+                    f"amendment {ver} has no Sync Impact Report naming what it propagates to")
+
+        # --- C7: no number derived from code may live in the constitution.
+        for i, line in enumerate(text.splitlines()):
+            m = DERIVED_NUMBER.search(line)
+            if m:
+                r.check(False, "C7-NO-DERIVED-NUMBERS",
+                        f"PRINCIPLES.md:{i+1} states '{m.group(0)}' -- numbers belong in the "
+                        f"script that measures them")
+
+    # --- C8: the two harness files may not contradict each other on authority gates.
+    ag, pr = read(root / "AGENTS.md"), read(prin) if prin.exists() else ""
+    if ag and pr:
+        main_never = re.search(r"push.{0,40}`main`.{0,40}\*\*never\*\*", ag, re.I | re.S)
+        main_lifted = "Direct commits and pushes to `main` are permitted" in pr
+        r.check(not (main_never and main_lifted), "C8-GATES-AGREE",
+                "AGENTS.md says pushing to main is 'never' while PRINCIPLES.md lifts that gate")
+
+    # --- C9/C10: unresolved markers.
+    for d in docs:
+        text = read(d)
+        accepted = re.search(r"^Status:\s*\*{0,2}accepted", text, re.M | re.I)
+        for i, line in enumerate(text.splitlines()):
+            if CLARIFY.search(line):
+                r.check(not accepted, "C9-CLARIFY",
+                        f"{d.relative_to(root)}:{i+1} still has a NEEDS CLARIFICATION marker "
+                        f"in an accepted document")
+            if TODO.search(line) and d.name in OPERATING_SURFACE:
+                r.check(False, "C10-TODO", f"{d.relative_to(root)}:{i+1} has an unresolved marker")
+
+    return r
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--root", default=None, help="directory to audit (default: repo root)")
+    args = ap.parse_args()
+    root = Path(args.root).resolve() if args.root else Path(__file__).resolve().parents[2]
+
+    rep = audit(root)
+    if rep.failures:
+        print(f"HARNESS AUDIT FAIL — {len(rep.failures)} of {rep.checks_run} checks failed\n")
+        for f in rep.failures:
+            print(f"  {f}")
+        print("\nFix the artifact, not the rule. If a rule is wrong, amend PRINCIPLES.md.")
+        return 1
+    print(f"harness audit OK — {rep.checks_run} checks passed")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
