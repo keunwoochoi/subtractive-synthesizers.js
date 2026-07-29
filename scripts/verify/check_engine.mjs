@@ -17,7 +17,9 @@ const P = { ampSustain: 12, ampRelease: 13, gain: 19, chorusRate: 20, chorusDept
             reverbMix: 27, reverbSize: 28, filterKind: 37,
             unison: 31, detuneCents: 2, stereoWidth: 38, ampRelease2: 13,
             delayTime: 24, delayFeedback: 25, syncRatio: 39, envAmount: 8,
-            subLevel: 3, velToCutoff: 18 };
+            subLevel: 3, velToCutoff: 18,
+            pitchEnvAmount: 40, pitchEnvDecay: 41,
+            lfo2Rate: 42, lfo2ToCutoff: 43, lfoToCutoff: 35, lfoRate: 33 };
 
 const { instance } = await WebAssembly.instantiate(readFileSync(WASM), {});
 const x = instance.exports;
@@ -379,6 +381,71 @@ console.log("engine checks (shipped WASM)\n");
   check(torn.zc > flat.zc * 1.2, "hard sync brightens the tone",
         `zero crossings/s ${flat.zc.toFixed(0)} -> ${torn.zc.toFixed(0)}`);
   check(torn.rms > 0.01, "sync patch still sounds", `rms ${torn.rms.toFixed(3)}`);
+}
+
+// --- pitch envelope: a ONE-SHOT sweep, which is what the LFO structurally cannot do
+{
+  const bare = (e) => {
+    x.set_param(e, P.ampSustain, 0.9); x.set_param(e, P.unison, 1);
+    x.set_param(e, P.stereoWidth, 0); x.set_param(e, P.subLevel, 0);
+    x.set_param(e, P.cutoffHz, 20000); x.set_param(e, P.resonance, 0);
+    x.set_param(e, P.envAmount, 0); x.set_param(e, P.velToCutoff, 0);
+  };
+  const pitchAt = (a, t) => {
+    // Measure the SPAN between the first and last crossing, not the count over a fixed
+    // window. Counting crossings in 85 ms gives about 11 of them at this pitch, so one
+    // crossing either way is 12 Hz of quantisation -- which is exactly the "12 Hz error"
+    // that sent me looking for an envelope bug that an FFT said was not there.
+    const n = Math.floor(SR * 0.25), i = Math.floor(t * SR);
+    let first = -1, last = -1, count = 0, prev = 0;
+    for (let k = i; k < Math.min(i + n, a.length); k++) {
+      if (prev <= 0 && a[k] > 0) {
+        if (first < 0) first = k; else { last = k; count++; }
+      }
+      prev = a[k];
+    }
+    return count > 0 && last > first ? count / ((last - first) / SR) : 0;
+  };
+  const swept = renderSum(0.5, (e) => {
+    bare(e); x.set_param(e, P.pitchEnvAmount, 24); x.set_param(e, P.pitchEnvDecay, 0.08);
+    x.note_on(e, 48, 0.9);
+  });
+  const flat = renderSum(0.5, (e) => {
+    bare(e); x.set_param(e, P.pitchEnvAmount, 0); x.note_on(e, 48, 0.9);
+  });
+  const early = pitchAt(swept, 0.01), late = pitchAt(swept, 0.3);
+  check(early > late * 1.5, "pitch envelope sweeps down into the note",
+        `${early.toFixed(0)} Hz at 10 ms -> ${late.toFixed(0)} Hz at 300 ms`);
+  check(Math.abs(late - pitchAt(flat, 0.3)) < 5, "pitch envelope lands ON the note",
+        `${late.toFixed(0)} vs unswept ${pitchAt(flat, 0.3).toFixed(0)} Hz`);
+}
+
+// --- LFO 2 must RETRIGGER per note; that is the only reason it exists alongside LFO 1
+{
+  const sweepShape = (useLfo2, startAt) => {
+    const a = renderSum(1.2, (e) => {
+      x.set_param(e, P.ampSustain, 0.9); x.set_param(e, P.unison, 1);
+      x.set_param(e, P.stereoWidth, 0); x.set_param(e, P.subLevel, 0);
+      x.set_param(e, P.cutoffHz, 900); x.set_param(e, P.resonance, 0.2);
+      x.set_param(e, P.envAmount, 0); x.set_param(e, P.velToCutoff, 0);
+      if (useLfo2) { x.set_param(e, P.lfo2Rate, 2); x.set_param(e, P.lfo2ToCutoff, 2500); }
+      else { x.set_param(e, P.lfoRate, 2); x.set_param(e, P.lfoToCutoff, 2500); }
+    }, [[startAt, (e) => x.note_on(e, 48, 0.9)]]);
+    // Brightness envelope, sampled 100 ms after the note starts.
+    const i = Math.floor((startAt + 0.1) * SR), n = 2048;
+    let zc = 0, prev = 0;
+    for (let k = i; k < i + n; k++) { if (prev <= 0 && a[k] > 0) zc++; prev = a[k]; }
+    return zc;
+  };
+  // Same measurement 100 ms into the note, for notes started at different times.
+  const l2a = sweepShape(true, 0.0), l2b = sweepShape(true, 0.37);
+  const l1a = sweepShape(false, 0.0), l1b = sweepShape(false, 0.37);
+  check(Math.abs(l2a - l2b) <= Math.max(2, l2a * 0.08),
+        "LFO 2 starts from the same place on every note",
+        `${l2a} vs ${l2b} crossings 100 ms in`);
+  check(Math.abs(l1a - l1b) > Math.abs(l2a - l2b),
+        "LFO 1 is free-running, so it does NOT (the difference between them)",
+        `LFO1 ${l1a} vs ${l1b}; LFO2 ${l2a} vs ${l2b}`);
 }
 
 console.log();

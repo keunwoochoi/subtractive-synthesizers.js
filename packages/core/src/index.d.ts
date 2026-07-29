@@ -10,7 +10,9 @@ export type ParamName =
   | "reverbMix" | "reverbSize" | "reverbDamp" | "reverbPredelay"
   | "unison" | "glide"
   | "lfoRate" | "lfoToPitch" | "lfoToCutoff" | "lfoToPwm"
-  | "filterKind" | "stereoWidth" | "syncRatio";
+  | "filterKind" | "stereoWidth" | "syncRatio"
+  | "pitchEnvAmount" | "pitchEnvDecay"
+  | "lfo2Rate" | "lfo2ToCutoff" | "lfo2ToPitch";
 
 export declare const PARAM: Record<ParamName, number>;
 

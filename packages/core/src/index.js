@@ -17,6 +17,8 @@ export const PARAM = {
   delayMix: 23, delayTime: 24, delayFeedback: 25, delayTone: 26,
   reverbMix: 27, reverbSize: 28, reverbDamp: 29, reverbPredelay: 30,
   unison: 31, glide: 32, filterKind: 37, stereoWidth: 38, syncRatio: 39,
+  pitchEnvAmount: 40, pitchEnvDecay: 41,
+  lfo2Rate: 42, lfo2ToCutoff: 43, lfo2ToPitch: 44,
   lfoRate: 33, lfoToPitch: 34, lfoToCutoff: 35, lfoToPwm: 36,
 };
 

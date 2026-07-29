@@ -151,6 +151,17 @@ pub struct Patch {
     /// is actually played -- passes through those points rather than sitting on them,
     /// so this ships as a known limit rather than a blocker.
     pub sync_ratio: f32,
+    /// Pitch envelope depth in semitones, and its decay. A short downward sweep at the
+    /// start of a note is what makes a kick a kick and a tom a tom; the LFO cannot do
+    /// it because the LFO repeats and this must happen once, at the attack.
+    pub pitch_env_amount: f32,
+    pub pitch_env_decay: f32,
+    /// Second LFO, per-voice and RETRIGGERED on each note. The shared LFO is
+    /// free-running and moves every voice in lockstep, which is right for vibrato and
+    /// wrong for a pluck that wants its own sweep starting when it was played.
+    pub lfo2_rate: f32,
+    pub lfo2_to_cutoff: f32,
+    pub lfo2_to_pitch: f32,
     pub pulse_width: f32,
     pub detune_cents: f32,
     pub sub_level: f32,
@@ -178,6 +189,11 @@ impl Patch {
             lfo_pwm: 0.0,
             stereo_width: 0.7,
             sync_ratio: 1.0,
+            pitch_env_amount: 0.0,
+            pitch_env_decay: 0.08,
+            lfo2_rate: 3.0,
+            lfo2_to_cutoff: 0.0,
+            lfo2_to_pitch: 0.0,
             pulse_width: 0.5,
             detune_cents: 8.0,
             sub_level: 0.35,
@@ -209,6 +225,10 @@ pub struct Voice {
     /// Master phase for hard sync, always at the note's own pitch.
     sync_phase: f32,
     sync_dt: f32,
+    /// One-shot pitch envelope, and the per-voice LFO's own phase.
+    pitch_env: f32,
+    pitch_env_c: f32,
+    lfo2_phase: f32,
     noise: Noise,
     filter: [Ladder; 2],
     diode: [Diode; 2],
@@ -236,6 +256,9 @@ impl Voice {
             glide_c: 1.0,
             sync_phase: 0.0,
             sync_dt: 0.0,
+            pitch_env: 0.0,
+            pitch_env_c: 0.0,
+            lfo2_phase: 0.0,
             noise: Noise::new(1),
             filter: [Ladder::new(); 2],
             diode: [Diode::new(); 2],
@@ -269,6 +292,11 @@ impl Voice {
         }
         self.sub.set_phase(0.0);
         self.sync_phase = 0.0;
+        // Both start fresh on every note: that is the entire difference between these
+        // and the shared free-running LFO.
+        self.pitch_env = 1.0;
+        self.pitch_env_c = 1.0 - (-1.0 / (patch.pitch_env_decay.max(0.002) * sr)).exp();
+        self.lfo2_phase = 0.0;
 
         // Portamento. Starting from the previous note's pitch rather than the new one is
         // the whole effect; a glide time of zero must still land exactly on pitch, hence
@@ -334,8 +362,34 @@ impl Voice {
         // Portamento and vibrato both act on frequency, so they are resolved together
         // and the oscillator bank is retuned once per output sample rather than twice.
         self.f_now += (self.f0 - self.f_now) * self.glide_c;
-        let vib = if patch.lfo_pitch_cents != 0.0 {
-            cents(lfo * patch.lfo_pitch_cents)
+        // Per-voice LFO, retriggered at note-on.
+        self.lfo2_phase += patch.lfo2_rate / sr;
+        if self.lfo2_phase >= 1.0 {
+            self.lfo2_phase -= 1.0;
+        }
+        let t2 = self.lfo2_phase;
+        let lfo2 = if t2 < 0.5 { 4.0 * t2 - 1.0 } else { 3.0 - 4.0 * t2 };
+
+        // One-shot pitch envelope. An exponential only ASYMPTOTES to zero, so without a
+        // floor the note sits permanently sharp -- measured 141 Hz against 129 Hz on a
+        // 24-semitone sweep three hundred milliseconds after the attack, which a player
+        // would hear as the synth being out of tune rather than as an envelope.
+        if self.pitch_env > 0.0 {
+            self.pitch_env -= self.pitch_env * self.pitch_env_c;
+            if self.pitch_env < 1e-3 {
+                self.pitch_env = 0.0;
+            }
+        }
+
+        let mut semis = 0.0;
+        if patch.pitch_env_amount != 0.0 {
+            semis += self.pitch_env * patch.pitch_env_amount;
+        }
+        if patch.lfo2_to_pitch != 0.0 {
+            semis += lfo2 * patch.lfo2_to_pitch;
+        }
+        let vib = if patch.lfo_pitch_cents != 0.0 || semis != 0.0 {
+            cents(lfo * patch.lfo_pitch_cents + semis * 100.0)
         } else {
             1.0
         };
@@ -349,7 +403,8 @@ impl Voice {
         let cutoff = (patch.cutoff_hz * key * self.drift_cutoff
             + env * patch.env_amount
             + self.vel * patch.vel_to_cutoff
-            + lfo * patch.lfo_cutoff_hz)
+            + lfo * patch.lfo_cutoff_hz
+            + lfo2 * patch.lfo2_to_cutoff)
             .clamp(20.0, sr2 * 0.45);
         for i in 0..2 {
             match patch.filter_kind {

@@ -38,10 +38,10 @@ and that difference decides how the whole project verifies its work.
 <!-- generated:bundle -->
 | artifact | raw | gzipped |
 |---|---:|---:|
-| `packages/core/wasm/subtractive_dsp.wasm` | 75,181 B | 29,688 B |
-| `packages/core/src/index.js` | 4,968 B | 2,376 B |
+| `packages/core/wasm/subtractive_dsp.wasm` | 75,647 B | 29,893 B |
+| `packages/core/src/index.js` | 5,060 B | 2,408 B |
 | `packages/core/worklet/processor.js` | 4,977 B | 1,991 B |
-| **total** | | **34,055 B (33.3 KB)** |
+| **total** | | **34,292 B (33.5 KB)** |
 
 Budget is 60 KB gzipped for the whole library — currently **55%**.
 <!-- /generated:bundle -->
@@ -52,8 +52,8 @@ Budget is 60 KB gzipped for the whole library — currently **55%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **13.3 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 7.5x |
+| audio-thread budget used | **11.5 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 8.7x |
 <!-- /generated:bench -->
 
 Measured on the machine that regenerated this table, with the voice pool saturated and
@@ -127,10 +127,10 @@ which is the only thing that lets the work finish.
 |---|---:|
 | lead | 10 |
 | pad | 10 |
-| pluck | 7 |
-| bass | 6 |
+| pluck | 8 |
+| bass | 7 |
 | brass | 4 |
-| **total** | **37** |
+| **total** | **39** |
 <!-- /generated:roster -->
 
 ## Harness
