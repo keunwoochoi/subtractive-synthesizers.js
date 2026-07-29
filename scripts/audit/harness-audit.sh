@@ -17,5 +17,9 @@ echo "== proving the audit can fail =="
 python3 scripts/audit/test_harness_audit.py 2>&1 | tail -3
 
 echo
+echo "== proving verify-spec rejects cheats =="
+python3 scripts/verify/test_verify_spec.py 2>&1 | tail -3
+
+echo
 echo "== auditing the repo =="
 python3 scripts/audit/harness_audit.py
