@@ -1,0 +1,185 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>subtractive-synthesizers.js</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg:#0e1013; --panel:#171a1f; --line:#272c34; --ink:#e8eaed; --dim:#9aa3ad;
+    --accent:#ffb454; --accent2:#4fc3f7;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }
+  header { padding:28px 24px 12px; border-bottom:1px solid var(--line); }
+  h1 { margin:0; font-size:18px; letter-spacing:.02em; font-weight:600; }
+  h1 span { color:var(--accent); }
+  .sub { color:var(--dim); margin-top:6px; font-size:13px; }
+  main { max-width:960px; margin:0 auto; padding:22px 24px 60px; }
+  .panels { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px 16px; }
+  .panel h2 { margin:0 0 12px; font-size:11px; letter-spacing:.12em;
+              text-transform:uppercase; color:var(--dim); font-weight:600; }
+  .row { display:flex; align-items:center; gap:10px; margin:9px 0; }
+  .row label { flex:0 0 84px; color:var(--dim); font-size:12px; }
+  .row output { flex:0 0 58px; text-align:right; color:var(--accent2); font-size:12px; }
+  input[type=range]{ flex:1; accent-color:var(--accent); min-width:0; }
+  select { background:#0b0d10; color:var(--ink); border:1px solid var(--line);
+           border-radius:5px; padding:4px 8px; font:inherit; font-size:12px; flex:1; }
+  #start { margin-top:18px; background:var(--accent); color:#1a1205; border:0;
+           border-radius:6px; padding:12px 22px; font:inherit; font-weight:700;
+           cursor:pointer; font-size:14px; }
+  #start[disabled]{ opacity:.45; cursor:default; }
+  #kb { margin-top:22px; position:relative; height:150px; user-select:none;
+        touch-action:none; border:1px solid var(--line); border-radius:8px;
+        overflow:hidden; background:var(--panel); }
+  .wk { position:absolute; top:0; bottom:0; background:#f2f4f6; border-right:1px solid #c3c8cf; }
+  .wk.on { background:var(--accent); }
+  .bk { position:absolute; top:0; height:62%; background:#14171b; border-radius:0 0 3px 3px;
+        border:1px solid #000; z-index:2; }
+  .bk.on { background:var(--accent); }
+  .hint { color:var(--dim); font-size:12px; margin-top:10px; }
+  code { color:var(--accent2); }
+</style>
+
+<header>
+  <h1>subtractive<span>-synthesizers</span>.js</h1>
+  <div class="sub">Analog-style subtractive synthesis, computed on the fly. No samples.</div>
+</header>
+
+<main>
+  <button id="start">▶ Start audio</button>
+  <div class="hint" id="status">Click to create the AudioContext (browsers require a gesture).</div>
+
+  <div class="panels" style="margin-top:20px">
+    <div class="panel">
+      <h2>Oscillator</h2>
+      <div class="row"><label>shape</label>
+        <select id="shape"><option value="0">saw</option><option value="1">pulse</option>
+        <option value="2">triangle</option></select></div>
+      <div class="row"><label>detune</label><input type="range" id="detuneCents" min="0" max="40" step="0.5" value="8"><output>8</output></div>
+      <div class="row"><label>pulse w</label><input type="range" id="pulseWidth" min="0.05" max="0.95" step="0.01" value="0.5"><output>0.50</output></div>
+      <div class="row"><label>sub</label><input type="range" id="subLevel" min="0" max="1" step="0.01" value="0.35"><output>0.35</output></div>
+      <div class="row"><label>noise</label><input type="range" id="noiseLevel" min="0" max="1" step="0.01" value="0"><output>0.00</output></div>
+    </div>
+
+    <div class="panel">
+      <h2>Filter — ladder</h2>
+      <div class="row"><label>cutoff</label><input type="range" id="cutoffHz" min="60" max="8000" step="10" value="1200"><output>1200</output></div>
+      <div class="row"><label>resonance</label><input type="range" id="resonance" min="0" max="1" step="0.01" value="0.35"><output>0.35</output></div>
+      <div class="row"><label>drive</label><input type="range" id="drive" min="0.5" max="4" step="0.05" value="1.2"><output>1.20</output></div>
+      <div class="row"><label>env amt</label><input type="range" id="envAmount" min="0" max="8000" step="50" value="3200"><output>3200</output></div>
+      <div class="row"><label>key trk</label><input type="range" id="keyTrack" min="0" max="1" step="0.01" value="0.35"><output>0.35</output></div>
+    </div>
+
+    <div class="panel">
+      <h2>Amp envelope</h2>
+      <div class="row"><label>attack</label><input type="range" id="ampAttack" min="0.001" max="2" step="0.001" value="0.005"><output>0.005</output></div>
+      <div class="row"><label>decay</label><input type="range" id="ampDecay" min="0.005" max="2" step="0.005" value="0.2"><output>0.20</output></div>
+      <div class="row"><label>sustain</label><input type="range" id="ampSustain" min="0" max="1" step="0.01" value="0.75"><output>0.75</output></div>
+      <div class="row"><label>release</label><input type="range" id="ampRelease" min="0.005" max="3" step="0.005" value="0.25"><output>0.25</output></div>
+    </div>
+
+    <div class="panel">
+      <h2>Filter envelope</h2>
+      <div class="row"><label>attack</label><input type="range" id="fltAttack" min="0.001" max="2" step="0.001" value="0.002"><output>0.002</output></div>
+      <div class="row"><label>decay</label><input type="range" id="fltDecay" min="0.005" max="2" step="0.005" value="0.35"><output>0.35</output></div>
+      <div class="row"><label>sustain</label><input type="range" id="fltSustain" min="0" max="1" step="0.01" value="0.3"><output>0.30</output></div>
+      <div class="row"><label>release</label><input type="range" id="fltRelease" min="0.005" max="3" step="0.005" value="0.25"><output>0.25</output></div>
+    </div>
+  </div>
+
+  <div id="kb"></div>
+  <div class="hint">Play with the mouse, or type <code>a w s e d f t g y h u j k</code> — <code>z</code>/<code>x</code> shift octave.</div>
+</main>
+
+<script type="module">
+import { createEngine, PARAM } from "../../packages/core/src/index.js";
+
+const LOW = 48, N_KEYS = 25;
+const BLACK = new Set([1, 3, 6, 8, 10]);
+let engine = null, octave = 0;
+const held = new Set();
+
+const kb = document.getElementById("kb");
+const keyEls = new Map();
+(function buildKeyboard() {
+  const whites = [];
+  for (let i = 0; i < N_KEYS; i++) if (!BLACK.has((LOW + i) % 12)) whites.push(LOW + i);
+  const w = 100 / whites.length;
+  whites.forEach((note, i) => {
+    const el = document.createElement("div");
+    el.className = "wk";
+    el.style.left = `${i * w}%`; el.style.width = `${w}%`;
+    el.dataset.note = note; kb.appendChild(el); keyEls.set(note, el);
+  });
+  for (let i = 0; i < N_KEYS; i++) {
+    const note = LOW + i;
+    if (!BLACK.has(note % 12)) continue;
+    const below = whites.filter((n) => n < note).length;
+    const el = document.createElement("div");
+    el.className = "bk";
+    el.style.left = `${below * w - w * 0.3}%`; el.style.width = `${w * 0.6}%`;
+    el.dataset.note = note; kb.appendChild(el); keyEls.set(note, el);
+  }
+})();
+
+function down(note, vel = 0.85) {
+  if (!engine || held.has(note)) return;
+  held.add(note); engine.noteOn(note, vel);
+  keyEls.get(note)?.classList.add("on");
+}
+function up(note) {
+  if (!engine || !held.has(note)) return;
+  held.delete(note); engine.noteOff(note);
+  keyEls.get(note)?.classList.remove("on");
+}
+
+kb.addEventListener("pointerdown", (e) => {
+  const n = Number(e.target.dataset.note);
+  if (n) { kb.setPointerCapture(e.pointerId); down(n); }
+});
+kb.addEventListener("pointerup", () => [...held].forEach(up));
+kb.addEventListener("pointerleave", () => [...held].forEach(up));
+
+const KEYMAP = { a:0, w:1, s:2, e:3, d:4, f:5, t:6, g:7, y:8, h:9, u:10, j:11, k:12 };
+addEventListener("keydown", (e) => {
+  if (e.repeat) return;
+  if (e.key === "z") { octave = Math.max(-2, octave - 1); return; }
+  if (e.key === "x") { octave = Math.min(2, octave + 1); return; }
+  const s = KEYMAP[e.key]; if (s !== undefined) down(LOW + s + octave * 12);
+});
+addEventListener("keyup", (e) => {
+  const s = KEYMAP[e.key]; if (s !== undefined) up(LOW + s + octave * 12);
+});
+
+for (const el of document.querySelectorAll("input[type=range]")) {
+  const out = el.nextElementSibling;
+  const show = () => { out.value = Number(el.value).toFixed(el.step.includes(".") ? 2 : 0); };
+  show();
+  el.addEventListener("input", () => {
+    show();
+    engine?.setParam(el.id, Number(el.value));
+  });
+}
+document.getElementById("shape").addEventListener("change", (e) =>
+  engine?.setParam("shape", Number(e.target.value)));
+
+const status = document.getElementById("status");
+document.getElementById("start").addEventListener("click", async (e) => {
+  e.target.disabled = true;
+  status.textContent = "loading engine…";
+  try {
+    engine = await createEngine({
+      wasmUrl: "../../packages/core/wasm/subtractive_dsp.wasm",
+      workletUrl: "../../packages/core/worklet/processor.js",
+    });
+    await engine.resume();
+    for (const el of document.querySelectorAll("input[type=range]"))
+      engine.setParam(el.id, Number(el.value));
+    status.textContent = `ready — ${engine.context.sampleRate} Hz. Play the keyboard.`;
+  } catch (err) {
+    status.textContent = `failed: ${err.message}`;
+    e.target.disabled = false;
+  }
+});
+</script>

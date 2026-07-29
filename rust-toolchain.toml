@@ -1,0 +1,6 @@
+# Pinned to an EXACT version, not "stable". The shipped WASM is committed and the bundle
+# audit rebuilds it and byte-compares; a moving channel means local and CI build with
+# different rustc patch levels, different bytes, and a spurious audit failure.
+[toolchain]
+channel = "1.90.0"
+targets = ["wasm32-unknown-unknown"]

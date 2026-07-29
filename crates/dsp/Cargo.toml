@@ -1,0 +1,9 @@
+[package]
+name = "subtractive-dsp"
+version = "0.0.1"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "subtractive-synthesizers.js DSP core: antialiased oscillators, ZDF ladder filter, voice engine"
+
+[lib]
+crate-type = ["cdylib", "rlib"]

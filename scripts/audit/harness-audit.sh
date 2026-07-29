@@ -44,5 +44,9 @@ echo "== patch intents (PRINCIPLES #2) =="
 python3 scripts/verify/check_intents.py
 
 echo
+echo "== generated docs match their measurements =="
+python3 scripts/gen_docs.py --check
+
+echo
 echo "== auditing the repo =="
 python3 scripts/audit/harness_audit.py

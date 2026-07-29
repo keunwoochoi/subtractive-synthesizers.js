@@ -12,7 +12,14 @@ is to build the thing that games it and watch it lose.
 
 from __future__ import annotations
 
+import subprocess
+from pathlib import Path
+
 import numpy as np
+
+_ROOT = Path(__file__).resolve().parents[2]
+_WASM = _ROOT / "target/wasm32-unknown-unknown/release/subtractive_dsp.wasm"
+_RENDER = _ROOT / "scripts/verify/render_wasm.mjs"
 
 # The grid a lazy implementation would notice it is being tested on. Used only by the
 # special-cased cheat, to prove the visible/hidden split catches exactly this.
@@ -81,7 +88,24 @@ def cheat_special_cased(f0: float, sr: float, n: int) -> np.ndarray:
     return naive_saw(f0, sr, n)
 
 
-HONEST = {"polyblep_saw": polyblep_saw}
+def wasm_saw(f0: float, sr: float, n: int) -> np.ndarray:
+    """THE SHIPPED ARTIFACT. Renders through the real Rust->WASM oscillator via node.
+
+    Everything else in this module is scaffolding. This is the candidate whose verdict
+    actually means something: a Python reimplementation passing its own gates proves
+    nothing about the binary a browser will download.
+    """
+    if not _WASM.exists():
+        raise FileNotFoundError(
+            f"{_WASM} not built. Run: cargo build -p subtractive-dsp "
+            f"--target wasm32-unknown-unknown --release")
+    out = subprocess.run(
+        ["node", str(_RENDER), str(_WASM), str(f0), str(sr), str(n), "0"],
+        capture_output=True, check=True)
+    return np.frombuffer(out.stdout, dtype="<f4").astype(float)
+
+
+HONEST = {"wasm_saw": wasm_saw, "polyblep_saw": polyblep_saw}
 NEGATIVE_CONTROL = {"naive_saw": naive_saw}
 CHEATS = {
     "cheat_silence": cheat_silence,

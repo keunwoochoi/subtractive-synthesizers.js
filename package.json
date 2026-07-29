@@ -11,6 +11,14 @@
     "test:harness": "python3 scripts/audit/test_harness_audit.py",
     "verify:spec": "python3 scripts/verify/verify_spec.py",
     "test:verify": "python3 scripts/verify/test_verify_spec.py",
-    "check:intents": "python3 scripts/verify/check_intents.py"
+    "check:intents": "python3 scripts/verify/check_intents.py",
+    "build:wasm": "cargo build -p subtractive-dsp --target wasm32-unknown-unknown --release && cp target/wasm32-unknown-unknown/release/subtractive_dsp.wasm packages/core/wasm/",
+    "docs": "python3 scripts/gen_docs.py",
+    "docs:check": "python3 scripts/gen_docs.py --check",
+    "e2e": "node scripts/dev/e2e-check.mjs",
+    "dev": "scripts/dev/serve.sh"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.0"
   }
 }

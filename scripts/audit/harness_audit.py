@@ -77,9 +77,12 @@ def audit(root: Path) -> Report:
     # Exclusions are relative to root: when auditing a fixture, `root` is itself inside
     # scripts/audit/fixtures/, and matching on absolute parts would exclude every doc and
     # silently disable the checks. (Caught by test_harness_audit.py on the first run.)
+    # Vendored and build trees are not ours to audit: node_modules ships thousands of
+    # READMEs with broken relative links, and target/ is compiler output.
+    SKIP = {".git", "fixtures", "node_modules", "target", "dist"}
+
     def excluded(p: Path) -> bool:
-        rel = p.relative_to(root).parts
-        return ".git" in rel or "fixtures" in rel
+        return bool(SKIP & set(p.relative_to(root).parts))
 
     docs = sorted(p for p in root.rglob("*.md") if not excluded(p))
 

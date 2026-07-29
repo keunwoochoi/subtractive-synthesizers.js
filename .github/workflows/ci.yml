@@ -5,28 +5,50 @@ on:
   pull_request:
 
 jobs:
-  harness:
+  build-and-audit:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      # The verification harness measures spectra, so it needs numpy. The runner does
-      # not ship it: this step exists because CI went red on ModuleNotFoundError while
-      # every local run was green.
+        with: { python-version: '3.11' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      # rust-toolchain.toml pins the exact version. The pin exists because the shipped
+      # WASM is committed and byte-compared; a moving channel means different bytes.
+      - run: rustup show && rustup target add wasm32-unknown-unknown
       - run: pip install -r scripts/requirements-dev.txt
-      - name: Harness audit (proves it can fail, then audits the repo)
-        run: scripts/audit/harness-audit.sh
-      - name: Bundle ceiling
+      - run: npm ci --no-audit --no-fund
+
+      - name: Build WASM
+        run: cargo build -p subtractive-dsp --target wasm32-unknown-unknown --release
+
+      - name: Shipped WASM matches source, and the bundle is inside budget
         run: scripts/audit/bundle-size-audit.sh
+
+      - name: Grade the oscillator against its analytic prototype
+        run: python3 scripts/verify/verify_spec.py
+
+      - name: Harness audit (identity, fixtures, intents, generated docs, referents)
+        run: scripts/audit/harness-audit.sh
+
+  e2e:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: rustup show && rustup target add wasm32-unknown-unknown
+      - run: cargo build -p subtractive-dsp --target wasm32-unknown-unknown --release
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      # Proves the part scripts/verify cannot see: the AudioWorklet lifecycle, the
+      # module handshake, and whether a noteOn actually produces non-silent audio.
+      - run: node scripts/dev/e2e-check.mjs
 
   human-block:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     steps:
-      # AGENTS.md promises CI fails when the owner's HUMAN block is missing.
-      # An unenforced promise is the thing this repo exists to avoid.
       - name: Require a non-empty HUMAN block
         env:
           BODY: ${{ github.event.pull_request.body }}
