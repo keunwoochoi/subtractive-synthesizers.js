@@ -63,9 +63,9 @@ try {
   if (!/KB/.test(state.size)) fail(`size was not measured: ${state.size}`);
 
   // Switching patch mid-play must not throw or silence the engine.
-  await p.locator('.card[data-key="poly-pad"]').click();
+  await p.locator('.card[data-key="warm-pad"]').click();
   await p.waitForTimeout(900);
-  await p.locator('.card[data-key="analog-bass"]').click();
+  await p.locator('.card[data-key="acid"]').click();
   await p.waitForTimeout(600);
   await p.click("#play");
 

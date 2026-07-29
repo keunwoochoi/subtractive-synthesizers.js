@@ -52,6 +52,10 @@ echo "== engine checks (stability, headroom, effects) =="
 node scripts/verify/check_engine.mjs | tail -3
 
 echo
+echo "== patch bank (stability, loudness match, distinctness) =="
+node scripts/verify/check_patches.mjs | tail -4
+
+echo
 echo "== dsp-bench (audio-thread budget) =="
 node scripts/verify/dsp_bench.mjs | grep -E "active voices|bench|BENCH"
 

@@ -37,8 +37,8 @@ Budget is 60 KB gzipped for the whole library — currently **51%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **7.5 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 13.4x |
+| audio-thread budget used | **7.3 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 13.6x |
 <!-- /generated:bench -->
 
 Measured on the machine that regenerated this table, with the voice pool saturated and
@@ -108,9 +108,14 @@ to converge on, an intent written first is the only thing that lets a result be 
 which is the only thing that lets the work finish.
 
 <!-- generated:roster -->
-| patch | intent | implementation |
-|---|---|---|
-| `acid-bass` | yes | not yet |
+| group | patches |
+|---|---:|
+| pad | 10 |
+| lead | 9 |
+| pluck | 7 |
+| bass | 6 |
+| brass | 4 |
+| **total** | **36** |
 <!-- /generated:roster -->
 
 ## Harness

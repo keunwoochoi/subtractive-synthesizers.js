@@ -19,7 +19,9 @@
     "dev": "scripts/dev/serve.sh",
     "verify:engine": "node scripts/verify/check_engine.mjs",
     "bench": "node scripts/verify/dsp_bench.mjs",
-    "check:ci": "scripts/audit/check-ci.sh"
+    "check:ci": "scripts/audit/check-ci.sh",
+    "verify:patches": "node scripts/verify/check_patches.mjs",
+    "match:loudness": "python3 scripts/dev/match_loudness.py"
   },
   "devDependencies": {
     "playwright": "^1.62.0"

@@ -22,7 +22,11 @@
   #play[disabled]{opacity:.4;cursor:default}
   .tempo{display:flex;align-items:center;gap:8px;color:var(--dim);font-size:12px}
   input[type=range]{accent-color:var(--accent)}
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:11px}
+  .cards{display:block}
+  .grouphead{margin:16px 0 8px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+             color:var(--dim);font-weight:600}
+  .grouphead:first-child{margin-top:0}
+  .cardrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:9px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:9px;
         padding:13px 15px;cursor:pointer;transition:border-color .12s,background .12s}
   .card:hover{border-color:#3d4757}
@@ -75,7 +79,7 @@
 
 <script type="module">
 import { createEngine } from "../../packages/core/src/index.js";
-import { PRESETS, applyPreset } from "../../packages/core/src/presets.js";
+import { PRESETS, GROUPS, applyPreset } from "../../packages/core/src/presets.js";
 import { PATTERNS } from "./patterns.js";
 
 let engine = null, playing = false, current = "acid";
@@ -85,13 +89,28 @@ const LOOKAHEAD = 0.12, TICK = 25;
 const $ = (id) => document.getElementById(id);
 const cards = $("cards"), stepsEl = $("steps");
 
-for (const [key, p] of Object.entries(PRESETS)) {
-  const el = document.createElement("div");
-  el.className = "card" + (key === current ? " on" : "");
-  el.dataset.key = key;
-  el.innerHTML = `<h3>${p.label}</h3><p>${p.blurb}</p>`;
-  el.onclick = () => selectPatch(key);
-  cards.appendChild(el);
+// Thirty-six flat cards is a wall. Grouped by what the patch is FOR, in the order a
+// player thinks about a track: the low end, then the hook, then the bed, and so on.
+const LABEL = { bass: "Bass", lead: "Lead", pad: "Pad & atmosphere",
+                pluck: "Keys & pluck", brass: "Brass & stab" };
+for (const g of GROUPS) {
+  const entries = Object.entries(PRESETS).filter(([, p]) => p.group === g);
+  if (!entries.length) continue;
+  const h = document.createElement("h4");
+  h.className = "grouphead";
+  h.textContent = `${LABEL[g] ?? g} · ${entries.length}`;
+  cards.appendChild(h);
+  const row = document.createElement("div");
+  row.className = "cardrow";
+  for (const [key, p] of entries) {
+    const el = document.createElement("div");
+    el.className = "card" + (key === current ? " on" : "");
+    el.dataset.key = key;
+    el.innerHTML = `<h3>${p.label}</h3><p>${p.blurb}</p>`;
+    el.onclick = () => selectPatch(key);
+    row.appendChild(el);
+  }
+  cards.appendChild(row);
 }
 const stepEls = [];
 for (let i = 0; i < 16; i++) {
@@ -101,7 +120,7 @@ for (let i = 0; i < 16; i++) {
 }
 
 function drawSteps() {
-  const pat = PATTERNS[current].steps;
+  const pat = PATTERNS[PRESETS[current].group].steps;
   stepEls.forEach((el, i) => {
     const s = pat[i];
     el.className = "st" + (s ? (s.a ? " acc" : " hit") : "");
@@ -122,7 +141,7 @@ $("bpm").oninput = (e) => { $("bpmOut").value = e.target.value; };
 function schedule() {
   const bpm = Number($("bpm").value);
   const stepDur = 60 / bpm / 4;              // 16th notes
-  const pat = PATTERNS[current];
+  const pat = PATTERNS[PRESETS[current].group];
   const events = [];
   while (nextTime < engine.context.currentTime + LOOKAHEAD) {
     const s = pat.steps[step % 16];

@@ -194,6 +194,12 @@ def audit(root: Path) -> Report:
             if "node_modules" in f.relative_to(root).parts:
                 continue
             for i, line in enumerate(read(f).splitlines()):
+                # Skip comments: prose ABOUT the rule is not a violation of it. The
+                # check fired on the comment explaining why patterns were moved out,
+                # which is the rule catching its own documentation.
+                st = line.lstrip()
+                if st.startswith(("//", "/*", "*", "#")):
+                    continue
                 m = banned.search(line)
                 if m:
                     r.check(False, "C11-NOT-A-GROOVEBOX",

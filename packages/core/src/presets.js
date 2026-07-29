@@ -1,86 +1,151 @@
-// Patch bank. PRINCIPLES #1: curation is the product -- these values are the work.
+// The patch bank. PRINCIPLES #1: curation is the product -- these values ARE the work.
 //
-// Each patch commits to one direction rather than hedging. `acid` is the aggressive
-// end, not a usable-everywhere compromise; see patches/acid-bass/intent.md, which was
-// written before any of these numbers existed.
+// Categories follow the General MIDI sound set, a published open specification, and the
+// structural conventions of subtractive synthesis, which are textbook. Values are designed
+// against THIS engine's controls; nothing here is transcribed from anyone's factory bank.
+// See agentic-docs/licensing.md, "Patch design -- what may be learned from, and what may not".
+//
+// EVERY patch is merged over DEFAULTS before it is sent. The engine is stateful, so a
+// partial patch would inherit whatever the last one set -- which is how an acid line once
+// ended up playing through a chorus. Completeness is structural here, not a review habit.
 
-export const PRESETS = {
-  "analog-bass": {
-    label: "Analog bass", blurb: "Round, punchy, sits under everything.",
-    params: { shape: 0, detuneCents: 6, subLevel: 0.6, noiseLevel: 0, pulseWidth: 0.5,
-      cutoffHz: 420, resonance: 0.28, drive: 1.6, envAmount: 2200, keyTrack: 0.25,
-      ampAttack: 0.004, ampDecay: 0.30, ampSustain: 0.60, ampRelease: 0.14,
-      fltAttack: 0.001, fltDecay: 0.22, fltSustain: 0.12, fltRelease: 0.15,
-      velToCutoff: 1800, gain: 0.38, chorusMix: 0 ,
-      reverbMix: 0.05, reverbSize: 0.35, delayMix: 0 ,
-      unison: 2, glide: 0.0, lfoRate: 5.0, lfoToPitch: 0, lfoToCutoff: 0 },
-  },
-  "acid": {
-    label: "Acid", blurb: "Squelch. The filter is the instrument.",
-    params: { shape: 0, detuneCents: 0, subLevel: 0.18, noiseLevel: 0, pulseWidth: 0.5,
-      cutoffHz: 170, resonance: 0.88, drive: 2.6, envAmount: 3400, keyTrack: 0.15,
-      ampAttack: 0.002, ampDecay: 0.5, ampSustain: 0.85, ampRelease: 0.07,
-      fltAttack: 0.001, fltDecay: 0.17, fltSustain: 0.0, fltRelease: 0.10,
-      velToCutoff: 2600, gain: 0.34, chorusMix: 0 ,
-      reverbMix: 0.10, reverbSize: 0.4, delayMix: 0.18, delayTime: 0.187, delayFeedback: 0.32 ,
-      unison: 1, glide: 0.055, lfoRate: 5.0, lfoToPitch: 0, lfoToCutoff: 0 },
-  },
-  "poly-pad": {
-    label: "Poly pad", blurb: "Slow and wide, ensemble into a long hall.",
-    params: { shape: 0, detuneCents: 19, subLevel: 0.28, noiseLevel: 0.03, pulseWidth: 0.5,
-      cutoffHz: 620, resonance: 0.18, drive: 1.1, envAmount: 1500, keyTrack: 0.45,
-      ampAttack: 0.55, ampDecay: 1.2, ampSustain: 0.80, ampRelease: 1.30,
-      fltAttack: 0.70, fltDecay: 1.4, fltSustain: 0.55, fltRelease: 1.20,
-      velToCutoff: 900, gain: 0.30,
-      chorusRate: 0.42, chorusDepth: 4.2, chorusMix: 0.85 ,
-      reverbMix: 0.55, reverbSize: 0.85, reverbPredelay: 30, delayMix: 0 ,
-      unison: 3, glide: 0.0, lfoRate: 0.35, lfoToPitch: 4, lfoToCutoff: 180, lfoToPwm: 0.15 },
-  },
-  "lead": {
-    label: "Lead", blurb: "Hollow pulse, cuts through without volume.",
-    params: { shape: 1, detuneCents: 11, subLevel: 0.20, noiseLevel: 0, pulseWidth: 0.32,
-      cutoffHz: 1500, resonance: 0.42, drive: 1.5, envAmount: 2400, keyTrack: 0.5,
-      ampAttack: 0.015, ampDecay: 0.35, ampSustain: 0.82, ampRelease: 0.22,
-      fltAttack: 0.005, fltDecay: 0.30, fltSustain: 0.45, fltRelease: 0.22,
-      velToCutoff: 2000, gain: 0.30, chorusRate: 0.9, chorusDepth: 2.0, chorusMix: 0.30 ,
-      reverbMix: 0.30, reverbSize: 0.6, delayMix: 0.28, delayTime: 0.25, delayFeedback: 0.38 ,
-      unison: 3, glide: 0.04, lfoRate: 5.2, lfoToPitch: 9, lfoToCutoff: 0 },
-  },
-  "brass-stab": {
-    label: "Brass stab", blurb: "Filter env does the work. Hit it hard.",
-    params: { shape: 0, detuneCents: 13, subLevel: 0.22, noiseLevel: 0, pulseWidth: 0.5,
-      cutoffHz: 480, resonance: 0.48, drive: 1.8, envAmount: 4200, keyTrack: 0.35,
-      ampAttack: 0.012, ampDecay: 0.22, ampSustain: 0.68, ampRelease: 0.26,
-      fltAttack: 0.018, fltDecay: 0.26, fltSustain: 0.22, fltRelease: 0.24,
-      velToCutoff: 2800, gain: 0.30, chorusRate: 0.7, chorusDepth: 2.4, chorusMix: 0.35 ,
-      reverbMix: 0.28, reverbSize: 0.55, delayMix: 0 ,
-      unison: 3, glide: 0.0, lfoRate: 4.5, lfoToPitch: 3, lfoToCutoff: 0 },
-  },
-  "supersaw": {
-    label: "Supersaw", blurb: "Seven detuned saws. The sound the roster promised.",
-    params: { shape: 0, unison: 7, detuneCents: 26, subLevel: 0.10, noiseLevel: 0,
-      pulseWidth: 0.5, cutoffHz: 2600, resonance: 0.20, drive: 1.3, envAmount: 1800,
-      keyTrack: 0.6, ampAttack: 0.012, ampDecay: 0.5, ampSustain: 0.85, ampRelease: 0.35,
-      fltAttack: 0.01, fltDecay: 0.6, fltSustain: 0.6, fltRelease: 0.3,
-      velToCutoff: 1800, gain: 0.26, chorusMix: 0,
-      reverbMix: 0.35, reverbSize: 0.7, delayMix: 0.22, delayTime: 0.25,
-      delayFeedback: 0.3, glide: 0.0, lfoRate: 5.0, lfoToPitch: 0, lfoToCutoff: 0 },
-  },
-  "pluck": {
-    label: "Pluck", blurb: "Short, bright, no sustain. The default that just works.",
-    params: { shape: 0, detuneCents: 5, subLevel: 0.30, noiseLevel: 0, pulseWidth: 0.5,
-      cutoffHz: 900, resonance: 0.55, drive: 1.3, envAmount: 3600, keyTrack: 0.45,
-      ampAttack: 0.002, ampDecay: 0.26, ampSustain: 0.0, ampRelease: 0.12,
-      fltAttack: 0.001, fltDecay: 0.13, fltSustain: 0.0, fltRelease: 0.10,
-      velToCutoff: 2200, gain: 0.34, chorusMix: 0 ,
-      reverbMix: 0.22, reverbSize: 0.5, delayMix: 0.22, delayTime: 0.125, delayFeedback: 0.28 ,
-      unison: 2, glide: 0.0, lfoRate: 5.0, lfoToPitch: 0, lfoToCutoff: 0 },
-  },
+/** Neutral starting point. Any field a patch omits is RESET to this, never left behind. */
+export const DEFAULTS = {
+  shape: 0, filterKind: 0, unison: 2, detuneCents: 8, pulseWidth: 0.5,
+  subLevel: 0.25, noiseLevel: 0, glide: 0,
+  cutoffHz: 1200, resonance: 0.3, drive: 1.2, envAmount: 2400, keyTrack: 0.35,
+  velToCutoff: 2000,
+  ampAttack: 0.005, ampDecay: 0.25, ampSustain: 0.7, ampRelease: 0.25,
+  fltAttack: 0.002, fltDecay: 0.3, fltSustain: 0.3, fltRelease: 0.25,
+  lfoRate: 5, lfoToPitch: 0, lfoToCutoff: 0, lfoToPwm: 0,
+  chorusMix: 0, chorusRate: 0.6, chorusDepth: 3,
+  delayMix: 0, delayTime: 0.25, delayFeedback: 0.35, delayTone: 3200,
+  reverbMix: 0, reverbSize: 0.6, reverbDamp: 4200, reverbPredelay: 18,
+  gain: 0.32,
 };
+
+const F = { ladder: 0, diode: 1, lp: 2, bp: 3, hp: 4, notch: 5 };
+const W = { saw: 0, pulse: 1, tri: 2 };
+
+/** `group` picks the demo pattern: a pad and a bassline do not want the same notes. */
+export const PRESETS = {
+  "analog-bass": { label: "Analog bass", group: "bass",
+    blurb: "Round, punchy, sits under everything.",
+    params: { shape: W.saw, filterKind: F.ladder, unison: 2, detuneCents: 6, subLevel: 0.6, cutoffHz: 420, resonance: 0.28, drive: 1.6, envAmount: 2200, keyTrack: 0.25, ampDecay: 0.3, ampSustain: 0.6, ampRelease: 0.14, fltDecay: 0.22, fltSustain: 0.12, velToCutoff: 1800, reverbMix: 0.05, reverbSize: 0.35, gain: 0.569 } },
+  "acid": { label: "Acid", group: "bass",
+    blurb: "Squelch. The filter is the instrument.",
+    params: { shape: W.saw, filterKind: F.diode, unison: 1, subLevel: 0.18, cutoffHz: 170, resonance: 0.88, drive: 2.6, envAmount: 3400, keyTrack: 0.15, glide: 0.055, ampDecay: 0.5, ampSustain: 0.85, ampRelease: 0.07, fltDecay: 0.17, fltSustain: 0, velToCutoff: 2600, delayMix: 0.18, delayTime: 0.187, delayFeedback: 0.32, reverbMix: 0.1, gain: 0.123 } },
+  "sub-bass": { label: "Sub bass", group: "bass",
+    blurb: "Almost no harmonics. Felt more than heard.",
+    params: { shape: W.tri, filterKind: F.ladder, unison: 1, subLevel: 0.85, cutoffHz: 180, resonance: 0.05, drive: 1.0, envAmount: 300, keyTrack: 0.1, ampAttack: 0.008, ampDecay: 0.4, ampSustain: 0.85, ampRelease: 0.2, fltSustain: 0.6, velToCutoff: 400, gain: 0.357 } },
+  "growl-bass": { label: "Growl bass", group: "bass",
+    blurb: "Fast filter wobble. Aggressive and moving.",
+    params: { shape: W.saw, filterKind: F.ladder, unison: 2, detuneCents: 14, subLevel: 0.4, cutoffHz: 300, resonance: 0.7, drive: 3.0, envAmount: 1800, lfoRate: 7.5, lfoToCutoff: 1400, ampSustain: 0.85, ampRelease: 0.1, fltDecay: 0.25, fltSustain: 0.4, velToCutoff: 1600, gain: 0.345 } },
+  "pluck-bass": { label: "Pluck bass", group: "bass",
+    blurb: "No sustain at all. Percussive and dry.",
+    params: { shape: W.saw, filterKind: F.ladder, unison: 1, subLevel: 0.45, cutoffHz: 500, resonance: 0.55, drive: 1.5, envAmount: 3000, ampDecay: 0.2, ampSustain: 0, ampRelease: 0.09, fltDecay: 0.1, fltSustain: 0, velToCutoff: 2400, gain: 0.85 } },
+  "wide-bass": { label: "Wide bass", group: "bass",
+    blurb: "Heavily detuned pair, slow sweep. Wide and unstable.",
+    params: { shape: W.saw, filterKind: F.lp, unison: 2, detuneCents: 34, subLevel: 0.3, cutoffHz: 480, resonance: 0.4, drive: 1.4, envAmount: 900, lfoRate: 0.22, lfoToCutoff: 500, ampAttack: 0.02, ampSustain: 0.9, ampRelease: 0.3, fltSustain: 0.7, velToCutoff: 900, gain: 0.221 } },
+  "square-lead": { label: "Square lead", group: "lead",
+    blurb: "Hollow and vocal. The oldest lead there is.",
+    params: { shape: W.pulse, filterKind: F.ladder, unison: 1, pulseWidth: 0.5, subLevel: 0.2, cutoffHz: 1900, resonance: 0.25, envAmount: 1600, keyTrack: 0.6, ampAttack: 0.008, ampSustain: 0.85, ampRelease: 0.18, fltSustain: 0.5, lfoRate: 5.4, lfoToPitch: 7, reverbMix: 0.22, delayMix: 0.2, gain: 0.166 } },
+  "saw-lead": { label: "Saw lead", group: "lead",
+    blurb: "Bright and direct. Cuts without volume.",
+    params: { shape: W.saw, filterKind: F.ladder, unison: 2, detuneCents: 9, subLevel: 0.2, cutoffHz: 2200, resonance: 0.35, drive: 1.5, envAmount: 2000, keyTrack: 0.55, glide: 0.03, ampAttack: 0.01, ampSustain: 0.85, ampRelease: 0.2, fltSustain: 0.5, lfoRate: 5.2, lfoToPitch: 8, chorusMix: 0.3, delayMix: 0.28, reverbMix: 0.3, gain: 0.337 } },
+  "supersaw": { label: "Supersaw", group: "lead",
+    blurb: "Seven detuned saws. Wide enough to be its own chord.",
+    params: { shape: W.saw, filterKind: F.lp, unison: 7, detuneCents: 26, subLevel: 0.1, cutoffHz: 2600, resonance: 0.2, drive: 1.3, envAmount: 1800, keyTrack: 0.6, ampAttack: 0.012, ampDecay: 0.5, ampSustain: 0.85, ampRelease: 0.35, fltDecay: 0.6, fltSustain: 0.6, velToCutoff: 1800, reverbMix: 0.35, reverbSize: 0.7, delayMix: 0.22, gain: 0.149 } },
+  "fifths-lead": { label: "Fifths lead", group: "lead",
+    blurb: "Two voices a fifth apart. Instantly bigger than one note.",
+    params: { shape: W.saw, filterKind: F.ladder, unison: 2, detuneCents: 1400, subLevel: 0.15, cutoffHz: 1800, resonance: 0.3, drive: 1.4, envAmount: 1800, keyTrack: 0.6, ampAttack: 0.01, ampSustain: 0.8, ampRelease: 0.2, fltSustain: 0.45, reverbMix: 0.25, gain: 0.328 } },
+  "soft-lead": { label: "Soft lead", group: "lead",
+    blurb: "Triangle through a gentle filter. Flute-ish.",
+    params: { shape: W.tri, filterKind: F.lp, unison: 2, detuneCents: 5, subLevel: 0.15, cutoffHz: 2400, resonance: 0.12, drive: 1.0, envAmount: 900, keyTrack: 0.5, ampAttack: 0.06, ampSustain: 0.9, ampRelease: 0.3, fltAttack: 0.05, fltSustain: 0.7, lfoRate: 4.6, lfoToPitch: 6, chorusMix: 0.4, reverbMix: 0.4, gain: 0.178 } },
+  "buzz-lead": { label: "Buzz lead", group: "lead",
+    blurb: "Narrow pulse, hard drive. Nasal and rude.",
+    params: { shape: W.pulse, filterKind: F.diode, unison: 2, detuneCents: 12, pulseWidth: 0.16, subLevel: 0.1, cutoffHz: 1500, resonance: 0.6, drive: 3.2, envAmount: 2400, keyTrack: 0.5, ampSustain: 0.85, ampRelease: 0.15, fltDecay: 0.25, fltSustain: 0.45, delayMix: 0.25, gain: 0.166 } },
+  "pwm-lead": { label: "PWM lead", group: "lead",
+    blurb: "Pulse width breathing under the note.",
+    params: { shape: W.pulse, filterKind: F.ladder, unison: 2, detuneCents: 7, subLevel: 0.2, cutoffHz: 2000, resonance: 0.28, envAmount: 1400, keyTrack: 0.55, ampAttack: 0.015, ampSustain: 0.88, ampRelease: 0.22, fltSustain: 0.6, lfoRate: 0.9, lfoToPwm: 0.34, chorusMix: 0.35, reverbMix: 0.28, gain: 0.221 } },
+  "whistle-lead": { label: "Whistle lead", group: "lead",
+    blurb: "Almost a sine, with vibrato. Sits on top of everything.",
+    params: { shape: W.tri, filterKind: F.lp, unison: 1, subLevel: 0.05, cutoffHz: 3200, resonance: 0.08, drive: 1.0, envAmount: 400, keyTrack: 0.7, ampAttack: 0.05, ampSustain: 0.9, ampRelease: 0.25, fltSustain: 0.8, lfoRate: 5.8, lfoToPitch: 16, reverbMix: 0.45, delayMix: 0.2, gain: 0.124 } },
+  "warm-pad": { label: "Warm pad", group: "pad",
+    blurb: "Slow, thick, unhurried.",
+    params: { shape: W.saw, filterKind: F.ladder, unison: 3, detuneCents: 19, subLevel: 0.28, noiseLevel: 0.03, cutoffHz: 620, resonance: 0.18, drive: 1.1, envAmount: 1500, keyTrack: 0.45, ampAttack: 0.55, ampDecay: 1.2, ampSustain: 0.8, ampRelease: 1.3, fltAttack: 0.7, fltDecay: 1.4, fltSustain: 0.55, fltRelease: 1.2, velToCutoff: 900, chorusMix: 0.85, chorusRate: 0.42, chorusDepth: 4.2, reverbMix: 0.55, reverbSize: 0.85, reverbPredelay: 30, gain: 0.3 } },
+  "string-pad": { label: "String pad", group: "pad",
+    blurb: "Ensemble machine. Wide and slightly seasick.",
+    params: { shape: W.saw, filterKind: F.lp, unison: 5, detuneCents: 22, subLevel: 0.15, cutoffHz: 1500, resonance: 0.12, drive: 1.0, envAmount: 700, keyTrack: 0.5, ampAttack: 0.35, ampSustain: 0.85, ampRelease: 1.0, fltAttack: 0.4, fltSustain: 0.7, chorusMix: 0.95, chorusRate: 0.55, chorusDepth: 5.5, reverbMix: 0.5, reverbSize: 0.8, gain: 0.224 } },
+  "choir-pad": { label: "Choir pad", group: "pad",
+    blurb: "Pulse width drift and a soft top. Vowel-like.",
+    params: { shape: W.pulse, filterKind: F.lp, unison: 3, detuneCents: 14, pulseWidth: 0.44, subLevel: 0.2, noiseLevel: 0.04, cutoffHz: 1100, resonance: 0.2, envAmount: 800, keyTrack: 0.5, ampAttack: 0.5, ampSustain: 0.85, ampRelease: 1.1, fltAttack: 0.6, fltSustain: 0.6, lfoRate: 0.28, lfoToPwm: 0.26, chorusMix: 0.7, reverbMix: 0.6, reverbSize: 0.85, gain: 0.092 } },
+  "sweep-pad": { label: "Sweep pad", group: "pad",
+    blurb: "The filter is the movement. Very slow.",
+    params: { shape: W.saw, filterKind: F.ladder, unison: 3, detuneCents: 17, subLevel: 0.25, cutoffHz: 400, resonance: 0.5, drive: 1.3, envAmount: 900, ampAttack: 0.6, ampSustain: 0.85, ampRelease: 1.4, fltAttack: 0.8, fltSustain: 0.6, lfoRate: 0.12, lfoToCutoff: 2200, chorusMix: 0.5, reverbMix: 0.55, reverbSize: 0.9, gain: 0.414 } },
+  "glass-pad": { label: "Glass pad", group: "pad",
+    blurb: "Highpassed and thin. Sits above a mix, never in it.",
+    params: { shape: W.saw, filterKind: F.hp, unison: 4, detuneCents: 16, subLevel: 0, cutoffHz: 900, resonance: 0.35, drive: 1.1, envAmount: 600, keyTrack: 0.6, ampAttack: 0.4, ampSustain: 0.8, ampRelease: 1.1, fltAttack: 0.5, fltSustain: 0.6, chorusMix: 0.6, reverbMix: 0.65, reverbSize: 0.9, reverbDamp: 9000, gain: 0.583 } },
+  "dark-pad": { label: "Dark pad", group: "pad",
+    blurb: "Everything above the fundamental removed. Ominous.",
+    params: { shape: W.saw, filterKind: F.ladder, unison: 3, detuneCents: 21, subLevel: 0.5, cutoffHz: 260, resonance: 0.22, drive: 1.4, envAmount: 500, keyTrack: 0.3, ampAttack: 0.7, ampSustain: 0.85, ampRelease: 1.6, fltAttack: 0.9, fltSustain: 0.5, chorusMix: 0.4, reverbMix: 0.6, reverbSize: 0.95, reverbDamp: 2200, gain: 0.272 } },
+  "halo-pad": { label: "Halo pad", group: "pad",
+    blurb: "Mostly reverb. More space than sound.",
+    params: { shape: W.tri, filterKind: F.lp, unison: 4, detuneCents: 11, subLevel: 0.1, noiseLevel: 0.05, cutoffHz: 1800, resonance: 0.15, envAmount: 600, ampAttack: 0.9, ampSustain: 0.7, ampRelease: 1.8, fltAttack: 1.0, fltSustain: 0.7, chorusMix: 0.5, reverbMix: 0.8, reverbSize: 0.98, reverbPredelay: 45, delayMix: 0.2, delayTime: 0.5, gain: 0.191 } },
+  "notch-pad": { label: "Notch pad", group: "pad",
+    blurb: "A hole swept through the middle. Phaser-adjacent.",
+    params: { shape: W.saw, filterKind: F.notch, unison: 3, detuneCents: 15, subLevel: 0.2, cutoffHz: 800, resonance: 0.5, drive: 1.2, envAmount: 400, ampAttack: 0.45, ampSustain: 0.85, ampRelease: 1.2, fltSustain: 0.6, lfoRate: 0.18, lfoToCutoff: 1600, reverbMix: 0.5, gain: 0.24 } },
+  "atmosphere": { label: "Atmosphere", group: "pad",
+    blurb: "Noise and a narrow band. Barely a note at all.",
+    params: { shape: W.tri, filterKind: F.bp, unison: 2, detuneCents: 25, subLevel: 0.05, noiseLevel: 0.55, cutoffHz: 1100, resonance: 0.6, envAmount: 900, ampAttack: 1.1, ampSustain: 0.75, ampRelease: 2.0, fltAttack: 1.2, fltSustain: 0.6, lfoRate: 0.09, lfoToCutoff: 1200, reverbMix: 0.85, reverbSize: 0.98, reverbPredelay: 60, gain: 0.85 } },
+  "rain": { label: "Rain", group: "pad",
+    blurb: "Filtered noise, moving. No pitch to speak of.",
+    params: { shape: W.tri, filterKind: F.bp, unison: 1, subLevel: 0, noiseLevel: 0.9, cutoffHz: 2200, resonance: 0.72, envAmount: 600, keyTrack: 0.8, ampAttack: 0.5, ampSustain: 0.7, ampRelease: 1.2, fltSustain: 0.7, lfoRate: 0.45, lfoToCutoff: 1800, reverbMix: 0.6, delayMix: 0.3, delayTime: 0.4, gain: 0.69 } },
+  "pluck": { label: "Pluck", group: "pluck",
+    blurb: "Short, bright, no sustain. The default that just works.",
+    params: { shape: W.saw, filterKind: F.ladder, unison: 2, detuneCents: 5, subLevel: 0.3, cutoffHz: 900, resonance: 0.55, drive: 1.3, envAmount: 3600, keyTrack: 0.45, ampDecay: 0.26, ampSustain: 0, ampRelease: 0.12, fltDecay: 0.13, fltSustain: 0, velToCutoff: 2200, reverbMix: 0.22, delayMix: 0.22, delayTime: 0.125, gain: 0.85 } },
+  "bell-pluck": { label: "Bell pluck", group: "pluck",
+    blurb: "Glassy and short, with a long tail behind it.",
+    params: { shape: W.pulse, filterKind: F.bp, unison: 2, detuneCents: 8, subLevel: 0.1, cutoffHz: 1600, resonance: 0.55, drive: 1.1, envAmount: 2600, keyTrack: 0.8, ampDecay: 0.5, ampSustain: 0, ampRelease: 0.3, fltDecay: 0.2, fltSustain: 0, reverbMix: 0.55, reverbSize: 0.8, delayMix: 0.3, delayTime: 0.33, gain: 0.527 } },
+  "e-piano": { label: "Electric keys", group: "pluck",
+    blurb: "Soft attack, woody body, medium decay.",
+    params: { shape: W.tri, filterKind: F.ladder, unison: 2, detuneCents: 4, subLevel: 0.35, cutoffHz: 1300, resonance: 0.2, drive: 1.5, envAmount: 1600, keyTrack: 0.5, ampAttack: 0.004, ampDecay: 0.8, ampSustain: 0.25, ampRelease: 0.3, fltDecay: 0.5, fltSustain: 0.15, velToCutoff: 2600, chorusMix: 0.3, reverbMix: 0.25, gain: 0.412 } },
+  "clav": { label: "Clav", group: "pluck",
+    blurb: "Narrow pulse, high resonance, gone instantly.",
+    params: { shape: W.pulse, filterKind: F.bp, unison: 1, pulseWidth: 0.22, subLevel: 0.15, cutoffHz: 1600, resonance: 0.62, drive: 1.8, envAmount: 2600, keyTrack: 0.6, ampDecay: 0.22, ampSustain: 0.05, ampRelease: 0.1, fltDecay: 0.12, fltSustain: 0.1, velToCutoff: 2800, gain: 0.85 } },
+  "mallet": { label: "Mallet", group: "pluck",
+    blurb: "Struck and wooden. Almost no harmonics after the hit.",
+    params: { shape: W.tri, filterKind: F.lp, unison: 1, subLevel: 0.2, cutoffHz: 1400, resonance: 0.3, drive: 1.0, envAmount: 3000, keyTrack: 0.7, ampAttack: 0.001, ampDecay: 0.35, ampSustain: 0, ampRelease: 0.15, fltDecay: 0.07, fltSustain: 0, velToCutoff: 2600, reverbMix: 0.3, gain: 0.639 } },
+  "stab-key": { label: "Stab key", group: "pluck",
+    blurb: "Chord stab. Hits hard, stops dead.",
+    params: { shape: W.saw, filterKind: F.ladder, unison: 3, detuneCents: 10, subLevel: 0.2, cutoffHz: 700, resonance: 0.45, drive: 1.7, envAmount: 3800, ampAttack: 0.004, ampDecay: 0.3, ampSustain: 0, ampRelease: 0.12, fltDecay: 0.16, fltSustain: 0, velToCutoff: 2600, reverbMix: 0.3, gain: 0.85 } },
+  "crystal": { label: "Crystal", group: "pluck",
+    blurb: "Tiny, bright, and repeating away into the distance.",
+    params: { shape: W.saw, filterKind: F.hp, unison: 2, detuneCents: 9, subLevel: 0, cutoffHz: 900, resonance: 0.45, envAmount: 2400, keyTrack: 0.9, ampAttack: 0.001, ampDecay: 0.3, ampSustain: 0, ampRelease: 0.25, fltDecay: 0.18, fltSustain: 0, reverbMix: 0.6, reverbSize: 0.9, reverbDamp: 11000, delayMix: 0.4, delayTime: 0.28, delayFeedback: 0.5, gain: 0.766 } },
+  "brass-stab": { label: "Brass stab", group: "brass",
+    blurb: "Filter env does the work. Hit it hard.",
+    params: { shape: W.saw, filterKind: F.ladder, unison: 3, detuneCents: 13, subLevel: 0.22, cutoffHz: 480, resonance: 0.48, drive: 1.8, envAmount: 4200, ampAttack: 0.012, ampDecay: 0.22, ampSustain: 0.68, ampRelease: 0.26, fltAttack: 0.018, fltDecay: 0.26, fltSustain: 0.22, velToCutoff: 2800, lfoRate: 4.5, lfoToPitch: 3, chorusMix: 0.35, reverbMix: 0.28, gain: 0.485 } },
+  "brass-section": { label: "Brass section", group: "brass",
+    blurb: "Slower swell, wider. Several players, not one.",
+    params: { shape: W.saw, filterKind: F.ladder, unison: 5, detuneCents: 18, subLevel: 0.2, cutoffHz: 560, resonance: 0.4, drive: 1.6, envAmount: 3400, ampAttack: 0.07, ampDecay: 0.4, ampSustain: 0.8, ampRelease: 0.35, fltAttack: 0.09, fltDecay: 0.5, fltSustain: 0.5, velToCutoff: 2200, lfoRate: 4.2, lfoToPitch: 5, chorusMix: 0.4, reverbMix: 0.4, reverbSize: 0.7, gain: 0.344 } },
+  "hoover": { label: "Hoover", group: "brass",
+    blurb: "Detuned pulse with a downward sweep. Unmistakable.",
+    params: { shape: W.pulse, filterKind: F.ladder, unison: 5, detuneCents: 44, pulseWidth: 0.28, subLevel: 0.35, cutoffHz: 320, resonance: 0.72, drive: 2.6, envAmount: 5200, glide: 0.12, ampAttack: 0.01, ampSustain: 0.85, ampRelease: 0.25, fltDecay: 0.9, fltSustain: 0.18, lfoRate: 0.6, lfoToPwm: 0.2, reverbMix: 0.35, delayMix: 0.2, gain: 0.122 } },
+  "horn-swell": { label: "Horn swell", group: "brass",
+    blurb: "Slow in, slow out. Wants to be held.",
+    params: { shape: W.saw, filterKind: F.lp, unison: 4, detuneCents: 12, subLevel: 0.3, cutoffHz: 700, resonance: 0.25, drive: 1.4, envAmount: 2000, ampAttack: 0.3, ampSustain: 0.9, ampRelease: 0.6, fltAttack: 0.35, fltSustain: 0.7, lfoRate: 3.8, lfoToPitch: 4, chorusMix: 0.3, reverbMix: 0.45, reverbSize: 0.8, gain: 0.16 } },
+  "sci-fi": { label: "Sci-fi", group: "lead",
+    blurb: "Deep pitch modulation. Not really a musical instrument.",
+    params: { shape: W.pulse, filterKind: F.bp, unison: 2, detuneCents: 20, pulseWidth: 0.3, subLevel: 0.1, noiseLevel: 0.1, cutoffHz: 1400, resonance: 0.7, drive: 1.6, envAmount: 2000, ampAttack: 0.02, ampSustain: 0.8, ampRelease: 0.4, fltSustain: 0.5, lfoRate: 6.5, lfoToPitch: 45, lfoToCutoff: 900, reverbMix: 0.5, delayMix: 0.35, delayFeedback: 0.5, gain: 0.168 } },
+};
+
+/** Demo pattern groups, in menu order. */
+export const GROUPS = ["bass", "lead", "pad", "pluck", "brass"];
 
 export function applyPreset(engine, name) {
   const p = PRESETS[name];
   if (!p) throw new Error(`unknown preset: ${name}`);
-  for (const [k, v] of Object.entries(p.params)) engine.setParam(k, v);
+  // Merged over DEFAULTS: nothing carries over from the previously selected patch.
+  for (const [k, v] of Object.entries({ ...DEFAULTS, ...p.params })) engine.setParam(k, v);
   return p;
 }

@@ -39,6 +39,29 @@ The underlying patents are not a concern: the original transistor-ladder patent 
 | Välimäki & Huovilainen, BLIT/BLEP oscillator literature | Published papers | PolyBLEP and related band-limited step corrections |
 | Smith, *Physical Audio Signal Processing* (CCRMA, online) | Published | General DSP background |
 
+## Patch design — what may be learned from, and what may not
+
+Owner, 2026-07-29: *"I'm sure there are a lot of patches existing out there you can learn
+from and take it for."* The line this project draws:
+
+**Learned from, freely — the taxonomy.** What categories of sound a subtractive synth is
+expected to cover is public knowledge and, in the case of General MIDI, a *published open
+specification*: Synth Bass 1–2, Lead 1–8 (square, sawtooth, calliope, chiff, charang,
+voice, fifths, bass+lead), Pad 1–8 (new age, warm, polysynth, choir, bowed, metallic,
+halo, sweep), FX 1–8. Naming a patch "warm pad" or "square lead" describes a category, not
+a product. The structural conventions behind those categories — a pad has a slow attack, a
+pluck has none, an acid line wants a resonant lowpass and a slide — are textbook synthesis,
+documented in every book on the subject.
+
+**Not copied — parameter values from anyone's factory bank.** A specific manufacturer's
+patch is a designed artifact and its parameter set is theirs. Every value in
+`packages/core/src/presets.js` was chosen against this engine's own controls, which do not
+map one-to-one onto any hardware anyway. If a patch here ever sounds like a famous one,
+that is the taxonomy converging, not a transcription.
+
+**Not used at all — the names of machines or their factory patches.** See the trademark
+section above. Describe the sound, never the machine.
+
 ## Surveyed and NOT adopted
 
 Recorded so these are not re-surveyed every few months.

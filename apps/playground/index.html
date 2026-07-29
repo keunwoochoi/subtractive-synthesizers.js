@@ -443,7 +443,7 @@ document.getElementById("start").addEventListener("click", async (e) => {
       engine.setParam(el.id, Number(el.value));
     for (const id of ["shape", "filterKind"])
       engine.setParam(id, Number(document.getElementById(id).value));
-    status.textContent = `ready — ${engine.context.sampleRate} Hz. Play the keyboard.`;
+    status.textContent = "";
   } catch (err) {
     status.textContent = `failed: ${err.message}`;
     e.target.disabled = false;

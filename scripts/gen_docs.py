@@ -73,7 +73,25 @@ def gen_verdicts() -> str:
 
 
 def gen_roster() -> str:
-    """The patch roster, from the directories that hold the intents."""
+    """The patch bank, counted from the source of truth rather than described."""
+    import subprocess as sp
+    js = ("import('./packages/core/src/presets.js').then(m=>{const g={};"
+          "for(const p of Object.values(m.PRESETS))g[p.group]=(g[p.group]||0)+1;"
+          "console.log(JSON.stringify({n:Object.keys(m.PRESETS).length,g}))})")
+    out = sp.run(["node", "-e", js], capture_output=True, text=True, cwd=ROOT)
+    try:
+        d = __import__("json").loads(out.stdout.strip())
+    except Exception:
+        return "_(bank unavailable)_\n"
+    rows = ["| group | patches |", "|---|---:|"]
+    for k, v in sorted(d["g"].items(), key=lambda kv: -kv[1]):
+        rows.append(f"| {k} | {v} |")
+    rows.append(f"| **total** | **{d['n']}** |")
+    return "\n".join(rows) + "\n"
+
+
+def _gen_roster_dirs() -> str:
+    """The patch INTENT directories -- separate from the bank; an intent is a target."""
     patches = ROOT / "patches"
     rows = ["| patch | intent | implementation |", "|---|---|---|"]
     dirs = sorted(p for p in patches.iterdir() if p.is_dir()) if patches.exists() else []

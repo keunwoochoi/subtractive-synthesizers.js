@@ -29,7 +29,10 @@ try {
   p.on("console", m => { if (m.type() === "error") errs.push(m.text()); });
   await p.goto(`http://127.0.0.1:${PORT}/apps/playground/`, { timeout: 15000 });
   await p.click("#start");
-  await p.waitForFunction(() => document.getElementById("status").textContent.startsWith("ready"),
+  // Wait on the ENGINE existing, not on UI copy. The first version waited for the
+  // status line to read "ready…", which broke the moment that line was deleted at the
+  // owner's request -- a check coupled to wording rather than to state.
+  await p.waitForFunction(() => window.__playground?.engine != null,
                           null, { timeout: 20000 });
 
   // Instrument the port so we can see what the arp actually schedules.

@@ -38,6 +38,9 @@ jobs:
       - name: DSP budget
         run: node scripts/verify/dsp_bench.mjs
 
+      - name: Patch bank
+        run: node scripts/verify/check_patches.mjs
+
       - name: Harness audit (identity, fixtures, intents, generated docs, referents)
         run: scripts/audit/harness-audit.sh
 
