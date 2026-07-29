@@ -24,6 +24,7 @@ export const DEFAULTS = {
   stereoWidth: 0.7, syncRatio: 1,
   pitchEnvAmount: 0, pitchEnvDecay: 0.08,
   lfo2Rate: 3, lfo2ToCutoff: 0, lfo2ToPitch: 0,
+  noiseColor: 0, oscLevel: 1,
   gain: 0.32,
 };
 
@@ -44,7 +45,7 @@ export const PRESETS = {
       cutoffHz: 220, resonance: 0.15, drive: 1.8, envAmount: 700, keyTrack: 0.1,
       pitchEnvAmount: 26, pitchEnvDecay: 0.045,
       ampAttack: 0.001, ampDecay: 0.28, ampSustain: 0, ampRelease: 0.1,
-      fltDecay: 0.12, fltSustain: 0, velToCutoff: 600, stereoWidth: 0, gain: 0.478 } },
+      fltDecay: 0.12, fltSustain: 0, velToCutoff: 600, stereoWidth: 0, gain: 0.479 } },
 
   "sub-bass": { label: "Sub bass", group: "bass",
     blurb: "Almost no harmonics. Felt more than heard.",
@@ -114,6 +115,24 @@ export const PRESETS = {
   "notch-pad": { label: "Notch pad", group: "pad",
     blurb: "A hole swept through the middle. Phaser-adjacent.",
     params: { shape: W.saw, filterKind: F.notch, unison: 3, detuneCents: 15, subLevel: 0.2, cutoffHz: 800, resonance: 0.5, drive: 1.2, envAmount: 400, ampAttack: 0.45, ampSustain: 0.85, ampRelease: 1.2, fltSustain: 0.6, lfoRate: 0.18, lfoToCutoff: 1600, reverbMix: 0.5, gain: 0.213 } },
+  "wind": { label: "Wind", group: "pad",
+    blurb: "No oscillator at all — pink noise through a slow, resonant sweep.",
+    params: { oscLevel: 0, subLevel: 0, noiseLevel: 1, noiseColor: 1,
+      filterKind: F.bp, cutoffHz: 420, resonance: 0.55, drive: 1.0,
+      envAmount: 500, keyTrack: 0.6, lfo2Rate: 0.35, lfo2ToCutoff: 900,
+      ampAttack: 0.7, ampDecay: 1.5, ampSustain: 0.75, ampRelease: 1.4,
+      fltAttack: 0.9, fltDecay: 2.0, fltSustain: 0.6, fltRelease: 1.5,
+      reverbMix: 0.5, reverbSize: 0.85, stereoWidth: 0, gain: 0.85 } },
+
+  "breath-pad": { label: "Breath pad", group: "pad",
+    blurb: "Pink noise blended under the strings — the air a real ensemble has.",
+    params: { shape: W.saw, filterKind: F.lp, unison: 4, detuneCents: 14,
+      oscLevel: 0.85, noiseLevel: 0.45, noiseColor: 1,
+      cutoffHz: 900, resonance: 0.2, drive: 1.1, envAmount: 900, keyTrack: 0.5,
+      ampAttack: 0.5, ampDecay: 1.4, ampSustain: 0.8, ampRelease: 1.2,
+      fltAttack: 0.6, fltDecay: 1.8, fltSustain: 0.55, fltRelease: 1.2,
+      chorusMix: 0.35, reverbMix: 0.4, reverbSize: 0.8, stereoWidth: 0.9, gain: 0.256 } },
+
   "atmosphere": { label: "Atmosphere", group: "pad",
     blurb: "Noise and a narrow band. Barely a note at all.",
     params: { shape: W.tri, filterKind: F.bp, unison: 2, detuneCents: 25, subLevel: 0.05, noiseLevel: 0.55, cutoffHz: 1100, resonance: 0.6, envAmount: 900, ampAttack: 1.1, ampSustain: 0.75, ampRelease: 2.0, fltAttack: 1.2, fltSustain: 0.6, lfoRate: 0.09, lfoToCutoff: 1200, reverbMix: 0.85, reverbSize: 0.98, reverbPredelay: 60, gain: 0.85 , stereoWidth: 0.9 } },

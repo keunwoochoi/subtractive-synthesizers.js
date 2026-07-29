@@ -18,7 +18,7 @@ export const PARAM = {
   reverbMix: 27, reverbSize: 28, reverbDamp: 29, reverbPredelay: 30,
   unison: 31, glide: 32, filterKind: 37, stereoWidth: 38, syncRatio: 39,
   pitchEnvAmount: 40, pitchEnvDecay: 41,
-  lfo2Rate: 42, lfo2ToCutoff: 43, lfo2ToPitch: 44,
+  lfo2Rate: 42, lfo2ToCutoff: 43, lfo2ToPitch: 44, noiseColor: 45, oscLevel: 46,
   lfoRate: 33, lfoToPitch: 34, lfoToCutoff: 35, lfoToPwm: 36,
 };
 

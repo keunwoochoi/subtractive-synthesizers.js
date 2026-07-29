@@ -8,18 +8,15 @@
 //
 //     node scripts/verify/check_engine.mjs
 import { readFileSync } from "node:fs";
+import { PARAM } from "../../packages/core/src/index.js";
 
 const WASM = "packages/core/wasm/subtractive_dsp.wasm";
 const SR = 48000;
-const P = { ampSustain: 12, ampRelease: 13, gain: 19, chorusRate: 20, chorusDepth: 21,
-            chorusMix: 22, resonance: 6, cutoffHz: 5, drive: 7,
-            delayMix: 23, delayTime: 24, delayFeedback: 25,
-            reverbMix: 27, reverbSize: 28, filterKind: 37,
-            unison: 31, detuneCents: 2, stereoWidth: 38, ampRelease2: 13,
-            delayTime: 24, delayFeedback: 25, syncRatio: 39, envAmount: 8,
-            subLevel: 3, velToCutoff: 18,
-            pitchEnvAmount: 40, pitchEnvDecay: 41,
-            lfo2Rate: 42, lfo2ToCutoff: 43, lfoToCutoff: 35, lfoRate: 33 };
+// PARAM is IMPORTED, never mirrored. The copy that used to live here had duplicate keys
+// (delayTime and ampRelease each appeared twice) and drifted from the Rust match arms
+// every time a parameter was added -- the same defect that made check_patches.mjs reject
+// a valid patch with "unknown param stereoWidth".
+const P = PARAM;
 
 const { instance } = await WebAssembly.instantiate(readFileSync(WASM), {});
 const x = instance.exports;
@@ -388,7 +385,12 @@ console.log("engine checks (shipped WASM)\n");
   const bare = (e) => {
     x.set_param(e, P.ampSustain, 0.9); x.set_param(e, P.unison, 1);
     x.set_param(e, P.stereoWidth, 0); x.set_param(e, P.subLevel, 0);
-    x.set_param(e, P.cutoffHz, 20000); x.set_param(e, P.resonance, 0);
+    // 40 kHz, not 20 kHz. The filter runs inside the 2x oversampled loop, so it can be
+    // pushed above the audio band -- and it has to be. A 4-pole ladder is already 12 dB
+    // down AT its cutoff, so parking it at 20 kHz tilts the very spectrum this check is
+    // trying to read, and makes white look 3 dB quieter than pink for reasons that have
+    // nothing to do with the noise source.
+    x.set_param(e, P.cutoffHz, 40000); x.set_param(e, P.resonance, 0);
     x.set_param(e, P.envAmount, 0); x.set_param(e, P.velToCutoff, 0);
   };
   const pitchAt = (a, t) => {
@@ -446,6 +448,109 @@ console.log("engine checks (shipped WASM)\n");
   check(Math.abs(l1a - l1b) > Math.abs(l2a - l2b),
         "LFO 1 is free-running, so it does NOT (the difference between them)",
         `LFO1 ${l1a} vs ${l1b}; LFO2 ${l2a} vs ${l2b}`);
+}
+
+// --- noise colour: PINK is an equation, so it is graded against the equation
+//
+// Pink noise is power proportional to 1/f -- exactly -3.0103 dB per octave -- which
+// makes this one of the few timbral claims in the whole engine with closed-form ground
+// truth. So it gets graded that way rather than by "sounds darker".
+//
+// Measured in octave bands from a Welch average, because a single FFT of noise is noise:
+// individual bins scatter by many dB and the slope fitted through them wobbles by more
+// than the effect being measured. Averaging 24 windows brings the scatter under it.
+{
+  // oscLevel 0 isolates the noise. Before it existed there was no way to hear the noise
+  // source alone, and this check would have been fitting a slope through a sawtooth.
+  const setup = (color) => (e) => {
+    x.set_param(e, P.oscLevel, 0); x.set_param(e, P.subLevel, 0);
+    x.set_param(e, P.noiseLevel, 1); x.set_param(e, P.noiseColor, color);
+    // 40 kHz, not 20 kHz. The filter runs inside the 2x oversampled loop, so it can be
+    // pushed above the audio band -- and it has to be. A 4-pole ladder is already 12 dB
+    // down AT its cutoff, so parking it at 20 kHz tilts the very spectrum this check is
+    // trying to read, and makes white look 3 dB quieter than pink for reasons that have
+    // nothing to do with the noise source.
+    x.set_param(e, P.cutoffHz, 40000); x.set_param(e, P.resonance, 0);
+    x.set_param(e, P.drive, 1); x.set_param(e, P.envAmount, 0);
+    x.set_param(e, P.ampAttack, 0.001); x.set_param(e, P.ampSustain, 1);
+    x.set_param(e, P.gain, 0.5);
+    x.note_on(e, 48, 1.0);
+  };
+
+  /** Welch-averaged power in octave bands centred on `centres`, in dB. */
+  function octaveBands(a, centres) {
+    const N = 4096, HOP = N;
+    const win = Float32Array.from({ length: N }, (_, i) =>
+      0.5 - 0.5 * Math.cos((2 * Math.PI * i) / N));            // Hann
+    const acc = centres.map(() => 0);
+    let frames = 0;
+    for (let off = Math.floor(SR * 0.2); off + N <= a.length; off += HOP) {
+      // Real DFT only at the bins we need: octave bands span many bins, and summing
+      // |X(k)|^2 across a band is all the resolution this measurement has.
+      const seg = new Float32Array(N);
+      for (let i = 0; i < N; i++) seg[i] = a[off + i] * win[i];
+      centres.forEach((fc, bi) => {
+        const lo = Math.max(1, Math.round((fc / Math.SQRT2) * N / SR));
+        const hi = Math.min(N / 2 - 1, Math.round((fc * Math.SQRT2) * N / SR));
+        let p = 0;
+        for (let k = lo; k <= hi; k++) {
+          let re = 0, im = 0;
+          const w = (-2 * Math.PI * k) / N;
+          for (let i = 0; i < N; i++) { re += seg[i] * Math.cos(w * i); im += seg[i] * Math.sin(w * i); }
+          p += re * re + im * im;
+        }
+        // Per-bin power, so bands of different width are comparable -- a wide band
+        // contains more bins and would otherwise look louder for that reason alone.
+        acc[bi] += p / (hi - lo + 1);
+      });
+      frames++;
+    }
+    return acc.map((v) => 10 * Math.log10(v / frames + 1e-30));
+  }
+
+  // 125 Hz to 8 kHz: six octaves, above the filter's lowest pole and below where the
+  // decimator's own rolloff starts to contribute.
+  const CENTRES = [125, 250, 500, 1000, 2000, 4000, 8000];
+  const white = render(1.2, setup(0));
+  const pink = render(1.2, setup(1));
+
+  /** Least-squares dB-per-octave through the band powers. */
+  const slope = (db) => {
+    const n = db.length, xs = db.map((_, i) => i);
+    const mx = (n - 1) / 2, my = db.reduce((p, c) => p + c, 0) / n;
+    let num = 0, den = 0;
+    for (let i = 0; i < n; i++) { num += (xs[i] - mx) * (db[i] - my); den += (xs[i] - mx) ** 2; }
+    return num / den;
+  };
+
+  const sw = slope(octaveBands(white, CENTRES));
+  const sp = slope(octaveBands(pink, CENTRES));
+
+  check(Math.abs(sw) < 0.25, "white noise is flat",
+        `${sw.toFixed(2)} dB/octave, want 0`);
+  check(Math.abs(sp - (-3.0103)) < 0.3, "pink noise falls at the rate 1/f requires",
+        `${sp.toFixed(2)} dB/octave, want -3.01`);
+
+  // The colour control must not double as a volume control. If it does, every listening
+  // comparison of white against pink is really a loudness comparison -- the same trap
+  // the patch bank's loudness gate exists for, and the reason PINK_GAIN is normalised.
+  const lw = 20 * Math.log10(rms(white.subarray(SR * 0.2)));
+  const lp = 20 * Math.log10(rms(pink.subarray(SR * 0.2)));
+  check(Math.abs(lw - lp) < 1.0, "colour changes the spectrum, not the level",
+        `white ${lw.toFixed(1)} dBFS vs pink ${lp.toFixed(1)} dBFS`);
+
+  // A DC pole would make the noise random-walk instead of sitting on zero. The design
+  // script bounds the lowest pole at 8 Hz for exactly this reason; this is the check
+  // that would notice if that bound were ever relaxed.
+  const mean = pink.reduce((p, c) => p + c, 0) / pink.length;
+  check(Math.abs(mean) < 0.01 && allFinite(pink) && peak(pink) < 1.0,
+        "pink noise stays centred and inside headroom",
+        `mean ${mean.toFixed(4)}, peak ${peak(pink).toFixed(3)}`);
+
+  // oscLevel is new surface of its own: prove it actually silences the stack.
+  const muted = render(0.5, (e) => { setup(0)(e); x.set_param(e, P.noiseLevel, 0); });
+  check(rms(muted) < 1e-5, "oscLevel 0 with no noise or sub is silence",
+        `rms ${rms(muted).toExponential(2)}`);
 }
 
 console.log();

@@ -39,6 +39,12 @@ function render(name, seconds = 3.0, note = 48) {
   const params = { ...DEFAULTS, ...PRESETS[name].params };
   for (const [k, v] of Object.entries(params)) {
     if (PARAM[k] === undefined) throw new Error(`${name}: unknown param ${k}`);
+    // The VALUE too, not only the key. A patch written as `filterKind: F.svfBp` when the
+    // table says `F.bp` passes every name check and then sets the parameter to NaN, which
+    // the Rust side quietly reads as filter kind 0 -- so the patch loads, sounds wrong in
+    // a plausible way, and nothing anywhere says so. Caught exactly that on "Wind".
+    if (typeof v !== "number" || !Number.isFinite(v))
+      throw new Error(`${name}: param ${k} is ${v}, not a finite number`);
     x.set_param(e, PARAM[k], v);
   }
   x.note_on(e, note, 0.9);

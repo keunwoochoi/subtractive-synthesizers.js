@@ -133,7 +133,7 @@ export const PATTERN_FOR = {
   "choir-pad":"pad-progression", "sweep-pad":"pad-progression",
   "glass-pad":"ambient-drift", "dark-pad":"ambient-drift",
   "halo-pad":"ambient-drift", "notch-pad":"pad-progression",
-  "atmosphere":"ambient-drift", "rain":"ambient-drift",
+  "atmosphere":"ambient-drift", "wind":"ambient-drift", "breath-pad":"pad-progression", "rain":"ambient-drift",
 
   "pluck":"arp-classic", "bell-pluck":"arp-classic", "e-piano":"house-stabs",
   "clav":"funk-clav", "mallet":"arp-classic", "stab-key":"house-stabs",

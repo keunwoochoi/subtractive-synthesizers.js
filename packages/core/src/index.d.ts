@@ -12,7 +12,7 @@ export type ParamName =
   | "lfoRate" | "lfoToPitch" | "lfoToCutoff" | "lfoToPwm"
   | "filterKind" | "stereoWidth" | "syncRatio"
   | "pitchEnvAmount" | "pitchEnvDecay"
-  | "lfo2Rate" | "lfo2ToCutoff" | "lfo2ToPitch";
+  | "lfo2Rate" | "lfo2ToCutoff" | "lfo2ToPitch" | "noiseColor" | "oscLevel";
 
 export declare const PARAM: Record<ParamName, number>;
 

@@ -5,7 +5,7 @@
 
 use crate::filter::{tanh_fast, Diode, HalfBand, Ladder, Svf};
 use crate::flush_denormal;
-use crate::osc::{Noise, Osc, Shape};
+use crate::osc::{Noise, Osc, Pink, Shape};
 
 /// Analog-style ADSR. Exponential approach rather than linear ramps: a linear decay is
 /// one of the reliable giveaways that a synth is digital, because no analog envelope
@@ -165,7 +165,12 @@ pub struct Patch {
     pub pulse_width: f32,
     pub detune_cents: f32,
     pub sub_level: f32,
+    /// Level of the main oscillator stack. Completes the mixer: with this at 0 the
+    /// voice is sub and noise only, which is the whole of a wind or surf patch.
+    pub osc_level: f32,
     pub noise_level: f32,
+    /// 0 = white, 1 = pink (-3 dB/oct). Continuous: a blend is a legitimate colour.
+    pub noise_color: f32,
     pub cutoff_hz: f32,
     pub resonance: f32,
     pub drive: f32,
@@ -197,7 +202,9 @@ impl Patch {
             pulse_width: 0.5,
             detune_cents: 8.0,
             sub_level: 0.35,
+            osc_level: 1.0,
             noise_level: 0.0,
+            noise_color: 0.0,
             cutoff_hz: 1200.0,
             resonance: 0.35,
             drive: 1.2,
@@ -230,6 +237,7 @@ pub struct Voice {
     pitch_env_c: f32,
     lfo2_phase: f32,
     noise: Noise,
+    pink: Pink,
     filter: [Ladder; 2],
     diode: [Diode; 2],
     svf: [Svf; 2],
@@ -260,6 +268,7 @@ impl Voice {
             pitch_env_c: 0.0,
             lfo2_phase: 0.0,
             noise: Noise::new(1),
+            pink: Pink::new(),
             filter: [Ladder::new(); 2],
             diode: [Diode::new(); 2],
             svf: [Svf::new(); 2],
@@ -452,14 +461,20 @@ impl Voice {
                 let t = if n == 1 { 0.0 } else { (i as f32 / (n - 1) as f32) * 2.0 - 1.0 };
                 let pan = t * spread;
                 // Equal power, so widening does not change how loud the patch is.
-                l += v * ((1.0 - pan) * 0.5).sqrt();
-                r += v * ((1.0 + pan) * 0.5).sqrt();
+                l += v * ((1.0 - pan) * 0.5).sqrt() * patch.osc_level;
+                r += v * ((1.0 + pan) * 0.5).sqrt() * patch.osc_level;
             }
             // Sub and noise stay centred: a sub-bass that wanders is a mix problem, and
             // noise spread across the image just sounds like a broken speaker.
             let sub = self.sub.tick(Shape::Pulse, 0.5) * patch.sub_level;
             let nz = if patch.noise_level > 0.0 {
-                self.noise.tick() * patch.noise_level
+                // The pink filter runs whenever noise is on, not only when colour > 0.
+                // Gating it on colour would leave its five state variables stale, so the
+                // first sample after a patch change comes from a filter that last saw
+                // audio seconds ago -- a click on every preset switch.
+                let w = self.noise.tick();
+                let c = patch.noise_color.clamp(0.0, 1.0);
+                (w + (self.pink.tick(w) - w) * c) * patch.noise_level
             } else {
                 0.0
             };

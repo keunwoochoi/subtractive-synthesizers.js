@@ -380,6 +380,8 @@ pub unsafe extern "C" fn set_param(p: *mut Engine, id: u32, v: f32) {
         42 => e.patch.lfo2_rate = v.clamp(0.01, 20.0),
         43 => e.patch.lfo2_to_cutoff = v,
         44 => e.patch.lfo2_to_pitch = v,
+        45 => e.patch.noise_color = v.clamp(0.0, 1.0),
+        46 => e.patch.osc_level = v.clamp(0.0, 1.0),
         _ => {}
     }
 }
