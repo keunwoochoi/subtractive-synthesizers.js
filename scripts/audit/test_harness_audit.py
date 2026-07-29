@@ -33,6 +33,7 @@ MUST_REJECT = {
     "unversioned-constitution": "C6-CONSTITUTION",
     "amendment-no-sync": "C6-CONSTITUTION",
     "derived-number": "C7-NO-DERIVED-NUMBERS",
+    "trademark-leak": "C12-TRADEMARK",
 }
 
 

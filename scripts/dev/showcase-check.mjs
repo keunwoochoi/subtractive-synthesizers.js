@@ -1,5 +1,10 @@
 // Prove the showcase actually plays: patches load, the sequencer schedules, notes sound.
-import { chromium } from "playwright";
+// Engine selectable so CI can run the same checks on WebKit. Safari is where audio
+// APIs most often differ -- suspended contexts, a 44.1 kHz lock, and the
+// WebAssembly.Module cloning bug the worklet already works around.
+import * as pw from "playwright";
+const BROWSER = process.env.BROWSER ?? "chromium";
+const chromium = pw[BROWSER];
 import { spawn } from "node:child_process";
 const PORT = 8183;
 

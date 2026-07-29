@@ -4,3 +4,5 @@ __pycache__/
 *.pyc
 .DS_Store
 .dev-server.*.pid
+packages/core/*.tgz
+packages/core/dist/

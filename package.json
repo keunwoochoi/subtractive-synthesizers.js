@@ -21,7 +21,9 @@
     "bench": "node scripts/verify/dsp_bench.mjs",
     "check:ci": "scripts/audit/check-ci.sh",
     "verify:patches": "node scripts/verify/check_patches.mjs",
-    "match:loudness": "python3 scripts/dev/match_loudness.py"
+    "match:loudness": "python3 scripts/dev/match_loudness.py",
+    "build": "cd packages/core && node scripts/build.mjs",
+    "check:install": "node scripts/dev/install-check.mjs"
   },
   "devDependencies": {
     "playwright": "^1.62.0"

@@ -53,12 +53,18 @@ jobs:
       - run: rustup show && rustup target add wasm32-unknown-unknown
       - run: cargo build -p subtractive-dsp --target wasm32-unknown-unknown --release
       - run: npm ci --no-audit --no-fund
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium webkit
       # Proves the part scripts/verify cannot see: the AudioWorklet lifecycle, the
       # module handshake, and whether a noteOn actually produces non-silent audio.
       - run: node scripts/dev/e2e-check.mjs
       - run: node scripts/dev/showcase-check.mjs
       - run: node scripts/dev/arp-check.mjs
+      # Safari's engine, where audio APIs most often differ. A stated principle
+      # ("works where web devs work") that nothing verified until now.
+      - run: BROWSER=webkit node scripts/dev/e2e-check.mjs
+      - run: BROWSER=webkit node scripts/dev/showcase-check.mjs
+      # The release gate: pack, install clean, and make a sound from the PUBLISHED files.
+      - run: node scripts/dev/install-check.mjs
 
   human-block:
     if: github.event_name == 'pull_request'

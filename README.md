@@ -9,9 +9,24 @@ No samples, no CDN, works offline. `noteOn()` and you have a sound.
 >
 > ```sh
 > cargo build -p subtractive-dsp --target wasm32-unknown-unknown --release
-> scripts/dev/serve.sh start   # detached; → http://127.0.0.1:8291/apps/playground/showcase.html
+> scripts/dev/serve.sh start   # → http://127.0.0.1:8291/apps/playground/showcase.html
 > scripts/dev/serve.sh stop    # when you're done
 > ```
+
+```js
+import { createEngine } from "subtractive-synthesizers.js";
+import { applyPreset } from "subtractive-synthesizers.js/presets";
+
+const engine = await createEngine();   // resolves its own WASM and worklet
+applyPreset(engine, "supersaw");
+engine.noteOn(60, 0.9);
+```
+
+No bundler configuration, no files to copy. The worklet is inlined and served from a Blob
+URL, and the WASM resolves through `new URL(..., import.meta.url)`, which Vite, webpack 5
+and Rollup all understand. `scripts/dev/install-check.mjs` packs the package, installs it
+into a clean project and makes a sound from it — because every other check in this repo
+runs against the source tree, where the paths happen to line up.
 
 Second library in the `sets-of-instruments-js` family.
 [`physical-instruments.js`](https://github.com/keunwoochoi/physical-instruments.js) models
@@ -24,11 +39,11 @@ and that difference decides how the whole project verifies its work.
 | artifact | raw | gzipped |
 |---|---:|---:|
 | `packages/core/wasm/subtractive_dsp.wasm` | 72,042 B | 28,317 B |
-| `packages/core/src/index.js` | 3,108 B | 1,559 B |
+| `packages/core/src/index.js` | 4,936 B | 2,360 B |
 | `packages/core/worklet/processor.js` | 4,616 B | 1,873 B |
-| **total** | | **31,749 B (31.0 KB)** |
+| **total** | | **32,550 B (31.8 KB)** |
 
-Budget is 60 KB gzipped for the whole library — currently **51%**.
+Budget is 60 KB gzipped for the whole library — currently **52%**.
 <!-- /generated:bundle -->
 
 ## Cost
@@ -37,8 +52,8 @@ Budget is 60 KB gzipped for the whole library — currently **51%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **7.4 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 13.5x |
+| audio-thread budget used | **9.4 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 10.6x |
 <!-- /generated:bench -->
 
 Measured on the machine that regenerated this table, with the voice pool saturated and
@@ -125,7 +140,7 @@ which is the only thing that lets the work finish.
 |---|---|
 | harness audit assertions | 24 |
 | fail-correctly tests | 18 |
-| deliberately-broken fixtures | 7 |
+| deliberately-broken fixtures | 8 |
 <!-- /generated:harness-stats -->
 
 Rules here are hooks, generated artifacts, or failing tests — never prose. Including the

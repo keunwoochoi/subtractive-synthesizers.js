@@ -1,4 +1,10 @@
 // Public API. SSR-safe: nothing touches `window` or `AudioContext` at import time.
+//
+// The worklet source is inlined at build time and served from a Blob URL, so no bundler
+// configuration is required and no file has to be copied into a consumer's public
+// directory. In the source tree the placeholder is null and the worklet is fetched from
+// its own file, which keeps `npm run dev` working without a build.
+const WORKLET_SOURCE = /* __WORKLET_SOURCE__ */ null;
 
 /** Patch parameter ids. Mirrors the `set_param` match arms in crates/dsp/src/lib.rs. */
 export const PARAM = {
@@ -16,14 +22,55 @@ export const PARAM = {
 
 export const SHAPE = { saw: 0, pulse: 1, triangle: 2 };
 
+/** Filter types: two 4-pole lowpass characters, then the state-variable outputs. */
+export const FILTER = {
+  ladderLp: 0, diodeLp: 1, svfLp: 2, svfBp: 3, svfHp: 4, svfNotch: 5,
+};
+
 /**
  * Create the engine. Lazy: the AudioContext is constructed here, so call it from a
  * user gesture (browsers refuse to start audio otherwise).
  */
+/**
+ * Create the engine.
+ *
+ * Zero configuration is the point: with no arguments it resolves its own WASM relative to
+ * this module and builds the worklet from inlined source. Both are overridable for anyone
+ * serving assets from a CDN or a non-standard path.
+ *
+ * Call it from a user gesture — browsers refuse to start audio otherwise.
+ */
 export async function createEngine({ wasmUrl, workletUrl, context, initialEvents } = {}) {
   const ctx = context ?? new (globalThis.AudioContext ?? globalThis.webkitAudioContext)();
-  const bytes = await (await fetch(wasmUrl)).arrayBuffer();
-  await ctx.audioWorklet.addModule(workletUrl);
+
+  // Vite, webpack 5 and Rollup all understand this and emit the asset; it is the one
+  // idiom that does not require a plugin.
+  const wasm = wasmUrl ?? new URL("./wasm/subtractive_dsp.wasm", import.meta.url);
+  const res = await fetch(wasm);
+  if (!res.ok) {
+    throw new Error(
+      `subtractive-synthesizers: could not load WASM from ${wasm} (HTTP ${res.status}). ` +
+      `Pass { wasmUrl } if you serve it from elsewhere.`);
+  }
+  const bytes = await res.arrayBuffer();
+
+  let moduleUrl = workletUrl;
+  let revoke;
+  if (!moduleUrl) {
+    if (WORKLET_SOURCE) {
+      const blob = new Blob([WORKLET_SOURCE], { type: "text/javascript" });
+      moduleUrl = URL.createObjectURL(blob);
+      revoke = () => URL.revokeObjectURL(moduleUrl);
+    } else {
+      // Source-tree fallback: no build has run, so fetch the worklet from its own file.
+      moduleUrl = new URL("../worklet/processor.js", import.meta.url);
+    }
+  }
+  try {
+    await ctx.audioWorklet.addModule(moduleUrl);
+  } finally {
+    revoke?.();
+  }
 
   // Everything the engine needs to make sound is handed over WITH the node. Port
   // messages remain the live-control path, but an offline render must never depend on
