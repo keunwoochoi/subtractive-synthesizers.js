@@ -56,36 +56,69 @@
       <div class="row"><label>shape</label>
         <select id="shape"><option value="0">saw</option><option value="1">pulse</option>
         <option value="2">triangle</option></select></div>
-      <div class="row"><label>detune</label><input type="range" id="detuneCents" min="0" max="40" step="0.5" value="8"><output>8</output></div>
-      <div class="row"><label>pulse w</label><input type="range" id="pulseWidth" min="0.05" max="0.95" step="0.01" value="0.5"><output>0.50</output></div>
-      <div class="row"><label>sub</label><input type="range" id="subLevel" min="0" max="1" step="0.01" value="0.35"><output>0.35</output></div>
-      <div class="row"><label>noise</label><input type="range" id="noiseLevel" min="0" max="1" step="0.01" value="0"><output>0.00</output></div>
+      <div class="row"><label>detune</label><input type="range" id="detuneCents" data-param min="0" max="40" step="0.5" value="8"><output>8</output></div>
+      <div class="row"><label>pulse w</label><input type="range" id="pulseWidth" data-param min="0.05" max="0.95" step="0.01" value="0.5"><output>0.50</output></div>
+      <div class="row"><label>sub</label><input type="range" id="subLevel" data-param min="0" max="1" step="0.01" value="0.35"><output>0.35</output></div>
+      <div class="row"><label>noise</label><input type="range" id="noiseLevel" data-param min="0" max="1" step="0.01" value="0"><output>0.00</output></div>
     </div>
 
     <div class="panel">
       <h2>Filter — ladder</h2>
-      <div class="row"><label>cutoff</label><input type="range" id="cutoffHz" min="60" max="8000" step="10" value="1200"><output>1200</output></div>
-      <div class="row"><label>resonance</label><input type="range" id="resonance" min="0" max="1" step="0.01" value="0.35"><output>0.35</output></div>
-      <div class="row"><label>drive</label><input type="range" id="drive" min="0.5" max="4" step="0.05" value="1.2"><output>1.20</output></div>
-      <div class="row"><label>env amt</label><input type="range" id="envAmount" min="0" max="8000" step="50" value="3200"><output>3200</output></div>
-      <div class="row"><label>key trk</label><input type="range" id="keyTrack" min="0" max="1" step="0.01" value="0.35"><output>0.35</output></div>
+      <div class="row"><label>cutoff</label><input type="range" id="cutoffHz" data-param min="60" max="8000" step="10" value="1200"><output>1200</output></div>
+      <div class="row"><label>resonance</label><input type="range" id="resonance" data-param min="0" max="1" step="0.01" value="0.35"><output>0.35</output></div>
+      <div class="row"><label>drive</label><input type="range" id="drive" data-param min="0.5" max="4" step="0.05" value="1.2"><output>1.20</output></div>
+      <div class="row"><label>env amt</label><input type="range" id="envAmount" data-param min="0" max="8000" step="50" value="3200"><output>3200</output></div>
+      <div class="row"><label>key trk</label><input type="range" id="keyTrack" data-param min="0" max="1" step="0.01" value="0.35"><output>0.35</output></div>
     </div>
 
     <div class="panel">
       <h2>Amp envelope</h2>
-      <div class="row"><label>attack</label><input type="range" id="ampAttack" min="0.001" max="2" step="0.001" value="0.005"><output>0.005</output></div>
-      <div class="row"><label>decay</label><input type="range" id="ampDecay" min="0.005" max="2" step="0.005" value="0.2"><output>0.20</output></div>
-      <div class="row"><label>sustain</label><input type="range" id="ampSustain" min="0" max="1" step="0.01" value="0.75"><output>0.75</output></div>
-      <div class="row"><label>release</label><input type="range" id="ampRelease" min="0.005" max="3" step="0.005" value="0.25"><output>0.25</output></div>
+      <div class="row"><label>attack</label><input type="range" id="ampAttack" data-param min="0.001" max="2" step="0.001" value="0.005"><output>0.005</output></div>
+      <div class="row"><label>decay</label><input type="range" id="ampDecay" data-param min="0.005" max="2" step="0.005" value="0.2"><output>0.20</output></div>
+      <div class="row"><label>sustain</label><input type="range" id="ampSustain" data-param min="0" max="1" step="0.01" value="0.75"><output>0.75</output></div>
+      <div class="row"><label>release</label><input type="range" id="ampRelease" data-param min="0.005" max="3" step="0.005" value="0.25"><output>0.25</output></div>
     </div>
 
     <div class="panel">
       <h2>Filter envelope</h2>
-      <div class="row"><label>attack</label><input type="range" id="fltAttack" min="0.001" max="2" step="0.001" value="0.002"><output>0.002</output></div>
-      <div class="row"><label>decay</label><input type="range" id="fltDecay" min="0.005" max="2" step="0.005" value="0.35"><output>0.35</output></div>
-      <div class="row"><label>sustain</label><input type="range" id="fltSustain" min="0" max="1" step="0.01" value="0.3"><output>0.30</output></div>
-      <div class="row"><label>release</label><input type="range" id="fltRelease" min="0.005" max="3" step="0.005" value="0.25"><output>0.25</output></div>
+      <div class="row"><label>attack</label><input type="range" id="fltAttack" data-param min="0.001" max="2" step="0.001" value="0.002"><output>0.002</output></div>
+      <div class="row"><label>decay</label><input type="range" id="fltDecay" data-param min="0.005" max="2" step="0.005" value="0.35"><output>0.35</output></div>
+      <div class="row"><label>sustain</label><input type="range" id="fltSustain" data-param min="0" max="1" step="0.01" value="0.3"><output>0.30</output></div>
+      <div class="row"><label>release</label><input type="range" id="fltRelease" data-param min="0.005" max="3" step="0.005" value="0.25"><output>0.25</output></div>
     </div>
+
+    <div class="panel">
+      <h2>Effects</h2>
+      <div class="row"><label>chorus</label><input type="range" id="chorusMix" data-param min="0" max="1" step="0.01" value="0"><output>0.00</output></div>
+      <div class="row"><label>delay</label><input type="range" id="delayMix" data-param min="0" max="1" step="0.01" value="0"><output>0.00</output></div>
+      <div class="row"><label>dly time</label><input type="range" id="delayTime" data-param min="0.02" max="1" step="0.005" value="0.25"><output>0.25</output></div>
+      <div class="row"><label>dly fb</label><input type="range" id="delayFeedback" data-param min="0" max="0.92" step="0.01" value="0.35"><output>0.35</output></div>
+      <div class="row"><label>reverb</label><input type="range" id="reverbMix" data-param min="0" max="1" step="0.01" value="0"><output>0.00</output></div>
+      <div class="row"><label>rev size</label><input type="range" id="reverbSize" data-param min="0" max="1" step="0.01" value="0.6"><output>0.60</output></div>
+      <div class="row"><label>rev damp</label><input type="range" id="reverbDamp" data-param min="800" max="14000" step="100" value="4200"><output>4200</output></div>
+    </div>
+
+    <div class="panel">
+      <h2>Arpeggiator <span style="color:#5a6270;font-weight:400;text-transform:none;letter-spacing:0">— demo only</span></h2>
+      <div class="row"><label>enable</label>
+        <select id="arpOn"><option value="0">off</option><option value="1">on</option></select></div>
+      <div class="row"><label>mode</label>
+        <select id="arpMode">
+          <option value="up">up</option><option value="down">down</option>
+          <option value="updown">up / down</option><option value="played">as played</option>
+          <option value="random">random</option></select></div>
+      <div class="row"><label>rate</label>
+        <select id="arpRate">
+          <option value="4">1/4</option><option value="8">1/8</option>
+          <option value="12">1/8 triplet</option><option value="16" selected>1/16</option>
+          <option value="24">1/16 triplet</option></select></div>
+      <div class="row"><label>tempo</label><input type="range" id="arpBpm" min="60" max="200" step="1" value="120"><output>120</output></div>
+      <div class="row"><label>octaves</label><input type="range" id="arpOct" min="1" max="4" step="1" value="1"><output>1</output></div>
+      <div class="row"><label>gate</label><input type="range" id="arpGate" min="0.1" max="1" step="0.05" value="0.55"><output>0.55</output></div>
+      <div class="row"><label>hold</label>
+        <select id="arpHold"><option value="0">off</option><option value="1">latch</option></select></div>
+    </div>
+
   </div>
 
   <div id="kb"></div>
@@ -123,15 +156,95 @@ const keyEls = new Map();
   }
 })();
 
+const arp = {
+  on: false, mode: "up", rate: 16, bpm: 120, oct: 1, gate: 0.55, hold: false,
+  latched: new Set(), idx: 0, dir: 1, next: 0, timer: null, lit: null,
+};
+
 function down(note, vel = 0.85) {
   if (!engine || held.has(note)) return;
-  held.add(note); engine.noteOn(note, vel);
+  held.add(note);
   keyEls.get(note)?.classList.add("on");
+  if (arp.on) {
+    // Pressing a fresh chord while latched replaces the pattern rather than adding to
+    // it, which is what every hardware arp does and what fingers expect.
+    if (arp.hold && arp.restart) { arp.latched.clear(); arp.restart = false; }
+    if (arp.hold) arp.latched.add(note);
+    return;                       // the arp plays it, not the key
+  }
+  engine.noteOn(note, vel);
 }
 function up(note) {
   if (!engine || !held.has(note)) return;
-  held.delete(note); engine.noteOff(note);
+  held.delete(note);
   keyEls.get(note)?.classList.remove("on");
+  if (arp.on) {
+    if (arp.hold && held.size === 0) arp.restart = true;   // next press starts anew
+    return;
+  }
+  engine.noteOff(note);
+}
+
+/** Notes the arp should cycle, in play order, expanded across octaves. */
+function arpNotes() {
+  const src = arp.hold && arp.latched.size ? arp.latched : held;
+  let base = [...src];
+  if (!base.length) return base;
+  if (arp.mode !== "played") base.sort((a, b) => a - b);
+  if (arp.mode === "down") base.reverse();
+  const out = [];
+  for (let o = 0; o < arp.oct; o++) for (const n of base) out.push(n + o * 12);
+  if (arp.mode === "updown" && out.length > 2) {
+    // Drop the repeated endpoints so the turnaround does not stutter.
+    for (let i = out.length - 2; i > 0; i--) out.push(out[i]);
+  }
+  return out;
+}
+
+// Lookahead scheduler. A coarse JS timer decides WHICH note; the worklet places it on
+// the exact frame. Same split as the showcase — the timer only has to be roughly right.
+function arpTick() {
+  if (!engine || !arp.on) return;
+  const notes = arpNotes();
+  const ctx = engine.context;
+  if (!notes.length) { arp.next = Math.max(arp.next, ctx.currentTime + 0.05); return; }
+  const stepDur = 60 / arp.bpm / (arp.rate / 4);
+  const events = [];
+  while (arp.next < ctx.currentTime + 0.12) {
+    if (arp.next < ctx.currentTime) arp.next = ctx.currentTime + 0.01;
+    let i;
+    if (arp.mode === "random") i = Math.floor(Math.random() * notes.length);
+    else i = arp.idx % notes.length;
+    const n = notes[i];
+    events.push({ type: "noteOn", note: n, vel: 0.9, at: arp.next });
+    events.push({ type: "noteOff", note: n, at: arp.next + stepDur * arp.gate });
+    const at = arp.next, key = n;
+    setTimeout(() => flash(key), Math.max(0, (at - ctx.currentTime) * 1000));
+    arp.idx++;
+    arp.next += stepDur;
+  }
+  if (events.length) engine.schedule(events);
+}
+function flash(note) {
+  if (arp.lit != null) keyEls.get(arp.lit)?.classList.remove("on");
+  arp.lit = note;
+  const el = keyEls.get(note);
+  if (el) { el.classList.add("on"); setTimeout(() => {
+    if (!held.has(note)) el.classList.remove("on");
+  }, 110); }
+}
+function setArp(on) {
+  arp.on = on;
+  clearInterval(arp.timer); arp.timer = null;
+  if (on) {
+    arp.idx = 0;
+    arp.next = engine ? engine.context.currentTime + 0.05 : 0;
+    arp.timer = setInterval(arpTick, 25);
+    engine?.allOff();
+  } else {
+    arp.latched.clear(); engine?.clear();
+    for (const n of held) engine?.noteOn(n, 0.85);
+  }
 }
 
 kb.addEventListener("pointerdown", (e) => {
@@ -153,16 +266,34 @@ addEventListener("keyup", (e) => {
 });
 
 for (const el of document.querySelectorAll("input[type=range]")) {
+  // display wiring is for every slider; engine writes are only for [data-param]
   const out = el.nextElementSibling;
   const show = () => { out.value = Number(el.value).toFixed(el.step.includes(".") ? 2 : 0); };
   show();
   el.addEventListener("input", () => {
     show();
-    engine?.setParam(el.id, Number(el.value));
+    if (el.hasAttribute("data-param")) engine?.setParam(el.id, Number(el.value));
   });
 }
 document.getElementById("shape").addEventListener("change", (e) =>
   engine?.setParam("shape", Number(e.target.value)));
+
+for (const [id, key, cast] of [["arpMode","mode",String],["arpRate","rate",Number],
+                               ["arpHold","hold",(v)=>v==="1"]]) {
+  document.getElementById(id).addEventListener("change", (e) => {
+    arp[key] = cast(e.target.value);
+    if (key === "hold" && !arp.hold) arp.latched.clear();
+  });
+}
+for (const [id, key] of [["arpBpm","bpm"],["arpOct","oct"],["arpGate","gate"]]) {
+  document.getElementById(id).addEventListener("input", (e) => { arp[key] = Number(e.target.value); });
+}
+document.getElementById("arpOn").addEventListener("change", (e) => setArp(e.target.value === "1"));
+
+// Test hook. Deliberately narrow: it exposes the note gates and the arp state, not the
+// module. Without it a browser check cannot see whether the arp scheduled anything, and
+// a check that cannot see is a check that passes for the wrong reason.
+globalThis.__playground = { down, up, arp, get engine() { return engine; } };
 
 const status = document.getElementById("status");
 document.getElementById("start").addEventListener("click", async (e) => {
@@ -174,7 +305,7 @@ document.getElementById("start").addEventListener("click", async (e) => {
       workletUrl: "../../packages/core/worklet/processor.js",
     });
     await engine.resume();
-    for (const el of document.querySelectorAll("input[type=range]"))
+    for (const el of document.querySelectorAll("input[type=range][data-param]"))
       engine.setParam(el.id, Number(el.value));
     status.textContent = `ready — ${engine.context.sampleRate} Hz. Play the keyboard.`;
   } catch (err) {

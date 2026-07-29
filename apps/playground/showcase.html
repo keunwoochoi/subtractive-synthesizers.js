@@ -46,7 +46,7 @@
 <header>
   <h1>subtractive<span>-synthesizers</span>.js — showcase</h1>
   <div class="sub">Every note below is <b>computed on the fly</b> from oscillators and a
-    filter. No samples, no recordings — the whole engine is <b id="size"><!-- generated:bundle-total -->27.2 KB<!-- /generated:bundle-total --></b> gzipped.</div>
+    filter. No samples, no recordings — the whole engine is <b id="size"><!-- generated:bundle-total -->28.9 KB<!-- /generated:bundle-total --></b> gzipped.</div>
 </header>
 
 <main>
@@ -75,7 +75,8 @@
 
 <script type="module">
 import { createEngine } from "../../packages/core/src/index.js";
-import { PRESETS, PATTERNS, applyPreset } from "../../packages/core/src/presets.js";
+import { PRESETS, applyPreset } from "../../packages/core/src/presets.js";
+import { PATTERNS } from "./patterns.js";
 
 let engine = null, playing = false, current = "acid";
 let step = 0, nextTime = 0, timer = null;

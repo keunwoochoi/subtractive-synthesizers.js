@@ -13,7 +13,7 @@ pub mod fx;
 pub mod osc;
 pub mod voice;
 
-use fx::Chorus;
+use fx::{Chorus, Delay, Reverb};
 use osc::Shape;
 use voice::{soft_clip, Patch, Voice};
 
@@ -49,12 +49,23 @@ pub struct Engine {
     chorus_rate: f32,
     chorus_depth: f32,
     chorus_mix: f32,
+    delay: Delay,
+    delay_time: f32,
+    delay_fb: f32,
+    delay_tone: f32,
+    delay_mix: f32,
+    reverb: Reverb,
+    rev_size: f32,
+    rev_damp: f32,
+    rev_predelay: f32,
+    rev_mix: f32,
 }
 
 impl Engine {
     pub fn new(sample_rate: f32) -> Self {
+        let sr = if sample_rate > 0.0 { sample_rate } else { 48_000.0 };
         Engine {
-            sr: if sample_rate > 0.0 { sample_rate } else { 48_000.0 },
+            sr,
             voices: [Voice::new(); MAX_VOICES],
             patch: Patch::init(),
             seed: 0x2545_F491,
@@ -66,6 +77,16 @@ impl Engine {
             chorus_rate: 0.6,
             chorus_depth: 3.0,
             chorus_mix: 0.0,
+            delay: Delay::new(sr),
+            delay_time: 0.25,
+            delay_fb: 0.35,
+            delay_tone: 3200.0,
+            delay_mix: 0.0,
+            reverb: Reverb::new(sr),
+            rev_size: 0.6,
+            rev_damp: 4200.0,
+            rev_predelay: 18.0,
+            rev_mix: 0.0,
         }
     }
 
@@ -108,6 +129,14 @@ impl Engine {
         }
     }
 
+    fn sync_delay(&mut self) {
+        self.delay.set(self.delay_time, self.delay_fb, self.delay_tone, self.delay_mix, self.sr);
+    }
+
+    fn sync_reverb(&mut self) {
+        self.reverb.set(self.rev_size, self.rev_damp, self.rev_mix, self.rev_predelay, self.sr);
+    }
+
     fn sync_chorus(&mut self) {
         self.chorus.set(self.chorus_rate, self.chorus_depth, self.chorus_mix, self.sr);
     }
@@ -132,6 +161,16 @@ impl Engine {
         if self.chorus.is_active() {
             for s in self.out[..n].iter_mut() {
                 *s = self.chorus.process(*s);
+            }
+        }
+        if self.delay.is_active() {
+            for s in self.out[..n].iter_mut() {
+                *s = self.delay.process(*s);
+            }
+        }
+        if self.reverb.is_active() {
+            for s in self.out[..n].iter_mut() {
+                *s = self.reverb.process(*s);
             }
         }
         for s in self.out[..n].iter_mut() {
@@ -258,6 +297,16 @@ pub unsafe extern "C" fn set_param(p: *mut Engine, id: u32, v: f32) {
                 e.chorus.reset();
             }
         }
+        23 => { let w = e.delay.is_active(); e.delay_mix = v; e.sync_delay();
+                if !w && e.delay.is_active() { e.delay.reset(); } }
+        24 => { e.delay_time = v; e.sync_delay(); }
+        25 => { e.delay_fb = v; e.sync_delay(); }
+        26 => { e.delay_tone = v; e.sync_delay(); }
+        27 => { let w = e.reverb.is_active(); e.rev_mix = v; e.sync_reverb();
+                if !w && e.reverb.is_active() { e.reverb.reset(); } }
+        28 => { e.rev_size = v; e.sync_reverb(); }
+        29 => { e.rev_damp = v; e.sync_reverb(); }
+        30 => { e.rev_predelay = v; e.sync_reverb(); }
         _ => {}
     }
 }

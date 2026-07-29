@@ -51,6 +51,7 @@ jobs:
       # module handshake, and whether a noteOn actually produces non-silent audio.
       - run: node scripts/dev/e2e-check.mjs
       - run: node scripts/dev/showcase-check.mjs
+      - run: node scripts/dev/arp-check.mjs
 
   human-block:
     if: github.event_name == 'pull_request'

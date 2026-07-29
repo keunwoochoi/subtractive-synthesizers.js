@@ -6,6 +6,8 @@
 //! is a different and worse one. The architecture doc calls this milestone-critical
 //! rather than polish, and the pad preset shipped with a blurb admitting it was missing.
 
+extern crate alloc;
+
 use crate::flush_denormal;
 use core::f32::consts::TAU;
 
@@ -107,5 +109,203 @@ impl Chorus {
         wet *= 0.4;
 
         x * (1.0 - 0.5 * self.mix) + wet * self.mix
+    }
+}
+
+// ---------------------------------------------------------------------------------
+// The two effects every hardware synth ships with, and the reason it ships with them:
+// a synth without reverb and delay is not a smaller product, it is an unfinished one.
+// Owner, 2026-07-29: "if we can provide those ... sort of extra peripheral optional
+// features ... that'd be great. But again, only for those used very, very commonly."
+//
+// That last clause is the whole scope rule. Reverb, delay and chorus are on the front
+// panel of essentially every synthesizer made since 1985. A compressor, an EQ, a
+// bitcrusher and a phaser are not, and stay out — this is an instrument, not a rack.
+//
+// Buffers here are Vec, allocated once when the engine is created. "Allocation-free"
+// governs the RENDER path, not init; and a 128 KB array inside a Copy struct would be
+// constructed on the WASM stack before being moved into the box, which is a real way to
+// blow a 1 MB stack.
+// ---------------------------------------------------------------------------------
+
+/// Feedback delay with a damped repeat path.
+///
+/// The lowpass in the feedback is what makes a delay sound like an effect rather than a
+/// stack of copies: each repeat loses top end, so the tail recedes instead of piling up.
+pub struct Delay {
+    buf: alloc::vec::Vec<f32>,
+    write: usize,
+    delay: f32,
+    feedback: f32,
+    mix: f32,
+    damp_state: f32,
+    damp_c: f32,
+}
+
+impl Delay {
+    pub fn new(sr: f32) -> Self {
+        // 1.5 s at any supported rate.
+        let n = (sr * 1.5) as usize + 4;
+        Delay {
+            buf: alloc::vec![0.0; n],
+            write: 0,
+            delay: sr * 0.25,
+            feedback: 0.35,
+            mix: 0.0,
+            damp_state: 0.0,
+            damp_c: 0.35,
+        }
+    }
+
+    pub fn set(&mut self, time_s: f32, feedback: f32, damp_hz: f32, mix: f32, sr: f32) {
+        let max = (self.buf.len() - 2) as f32;
+        self.delay = (time_s.clamp(0.01, 1.5) * sr).min(max);
+        // Cap below 1.0 or the tail never decays and the line saturates into the limiter.
+        self.feedback = feedback.clamp(0.0, 0.92);
+        self.damp_c = 1.0 - (-TAU * damp_hz.clamp(400.0, 16000.0) / sr).exp();
+        self.mix = mix.clamp(0.0, 1.0);
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.mix > 0.0005
+    }
+
+    pub fn reset(&mut self) {
+        for s in self.buf.iter_mut() {
+            *s = 0.0;
+        }
+        self.damp_state = 0.0;
+    }
+
+    #[inline]
+    pub fn process(&mut self, x: f32) -> f32 {
+        let n = self.buf.len();
+        let pos = self.write as f32 - self.delay;
+        let pos = if pos < 0.0 { pos + n as f32 } else { pos };
+        let i = pos as usize % n;
+        let frac = pos - pos.floor();
+        let a = self.buf[i];
+        let b = self.buf[(i + 1) % n];
+        let echo = a + (b - a) * frac;
+
+        self.damp_state = flush_denormal(self.damp_state + self.damp_c * (echo - self.damp_state));
+        self.buf[self.write] = flush_denormal(x + self.damp_state * self.feedback);
+        self.write = (self.write + 1) % n;
+
+        x + echo * self.mix
+    }
+}
+
+/// Small feedback-delay-network reverb: predelay, four diffusing allpasses, then four
+/// damped delay lines mixed through a Householder matrix.
+///
+/// Four lines rather than eight because eight is twice the cost for a difference that
+/// does not survive a synth patch sitting on top of it, and this is a reverb for an
+/// instrument, not a mastering plate.
+pub struct Reverb {
+    predelay: alloc::vec::Vec<f32>,
+    pd_write: usize,
+    pd_len: usize,
+    ap: [alloc::vec::Vec<f32>; 4],
+    ap_i: [usize; 4],
+    lines: [alloc::vec::Vec<f32>; 4],
+    li: [usize; 4],
+    damp: [f32; 4],
+    damp_c: f32,
+    feedback: f32,
+    mix: f32,
+}
+
+impl Reverb {
+    pub fn new(sr: f32) -> Self {
+        let ms = |m: f32| ((sr * m / 1000.0) as usize).max(4);
+        // Mutually prime-ish lengths: equal or harmonically related lines make the tail
+        // ring on a pitch instead of dissolving.
+        let ap_ms = [13.7, 19.3, 27.1, 35.9];
+        let ln_ms = [61.7, 79.3, 97.1, 113.9];
+        Reverb {
+            predelay: alloc::vec![0.0; ms(120.0)],
+            pd_write: 0,
+            pd_len: ms(20.0),
+            ap: core::array::from_fn(|i| alloc::vec![0.0; ms(ap_ms[i])]),
+            ap_i: [0; 4],
+            lines: core::array::from_fn(|i| alloc::vec![0.0; ms(ln_ms[i])]),
+            li: [0; 4],
+            damp: [0.0; 4],
+            damp_c: 0.3,
+            feedback: 0.72,
+            mix: 0.0,
+        }
+    }
+
+    /// `size` 0..1 scales the tail length; `damp_hz` sets how fast the top end dies.
+    pub fn set(&mut self, size: f32, damp_hz: f32, mix: f32, predelay_ms: f32, sr: f32) {
+        self.feedback = 0.45 + 0.52 * size.clamp(0.0, 1.0);
+        self.damp_c = 1.0 - (-TAU * damp_hz.clamp(500.0, 16000.0) / sr).exp();
+        self.mix = mix.clamp(0.0, 1.0);
+        self.pd_len = ((predelay_ms.clamp(0.0, 100.0) / 1000.0 * sr) as usize)
+            .min(self.predelay.len() - 1)
+            .max(1);
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.mix > 0.0005
+    }
+
+    pub fn reset(&mut self) {
+        for b in self.ap.iter_mut().chain(self.lines.iter_mut()) {
+            for s in b.iter_mut() {
+                *s = 0.0;
+            }
+        }
+        for s in self.predelay.iter_mut() {
+            *s = 0.0;
+        }
+        self.damp = [0.0; 4];
+    }
+
+    #[inline]
+    fn allpass(&mut self, k: usize, x: f32) -> f32 {
+        let n = self.ap[k].len();
+        let i = self.ap_i[k];
+        let d = self.ap[k][i];
+        let y = -x + d;
+        self.ap[k][i] = flush_denormal(x + d * 0.5);
+        self.ap_i[k] = (i + 1) % n;
+        y
+    }
+
+    #[inline]
+    pub fn process(&mut self, x: f32) -> f32 {
+        // Predelay: the gap before the tail is most of what makes a space feel large.
+        let pl = self.predelay.len();
+        let rd = (self.pd_write + pl - self.pd_len) % pl;
+        let pre = self.predelay[rd];
+        self.predelay[self.pd_write] = x;
+        self.pd_write = (self.pd_write + 1) % pl;
+
+        let mut v = pre;
+        for k in 0..4 {
+            v = self.allpass(k, v);
+        }
+
+        let mut out = [0.0f32; 4];
+        for k in 0..4 {
+            out[k] = self.lines[k][self.li[k]];
+        }
+
+        // Householder feedback: every line feeds every other, which is what turns four
+        // discrete echoes into a diffuse tail.
+        let sum = (out[0] + out[1] + out[2] + out[3]) * 0.5;
+        for k in 0..4 {
+            let fed = out[k] - sum;
+            self.damp[k] = flush_denormal(self.damp[k] + self.damp_c * (fed - self.damp[k]));
+            let n = self.lines[k].len();
+            self.lines[k][self.li[k]] = flush_denormal(v * 0.35 + self.damp[k] * self.feedback);
+            self.li[k] = (self.li[k] + 1) % n;
+        }
+
+        let wet = (out[0] + out[1] + out[2] + out[3]) * 0.35;
+        x + wet * self.mix
     }
 }

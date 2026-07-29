@@ -177,6 +177,29 @@ def audit(root: Path) -> Report:
         r.check(not (main_never and main_lifted), "C8-GATES-AGREE",
                 "AGENTS.md says pushing to main is 'never' while PRINCIPLES.md lifts that gate")
 
+    # --- C11: the library stays an instrument. PRINCIPLES lists "not a DAW, sequencer,
+    # arpeggiator, or groovebox" as a non-goal, and a non-goal with no enforcement is a
+    # matter of judgement on a tired afternoon. The demo app may sequence all it likes;
+    # packages/ may not. Caught a real violation on its first run: a table of sixteen-step
+    # basslines was living in packages/core/src/presets.js.
+    #
+    # Note the distinction this encodes: scheduling infrastructure (playing a note at a
+    # given time) is the library's job; deciding WHICH notes to play is not.
+    banned = re.compile(r"\b(arpeggiat\w*|PATTERNS|stepSequenc\w*|bassline)\b", re.I)
+    pkg = root / "packages"
+    if pkg.exists():
+        for f in sorted(pkg.rglob("*")):
+            if not f.is_file() or f.suffix not in (".js", ".ts", ".rs"):
+                continue
+            if "node_modules" in f.relative_to(root).parts:
+                continue
+            for i, line in enumerate(read(f).splitlines()):
+                m = banned.search(line)
+                if m:
+                    r.check(False, "C11-NOT-A-GROOVEBOX",
+                            f"{f.relative_to(root)}:{i+1} has '{m.group(0)}' -- musical "
+                            f"sequencing belongs in apps/, not in the library")
+
     # --- C9/C10: unresolved markers.
     for d in docs:
         text = read(d)

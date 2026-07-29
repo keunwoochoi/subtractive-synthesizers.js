@@ -8,6 +8,8 @@ export const PARAM = {
   fltAttack: 14, fltDecay: 15, fltSustain: 16, fltRelease: 17,
   velToCutoff: 18, gain: 19,
   chorusRate: 20, chorusDepth: 21, chorusMix: 22,
+  delayMix: 23, delayTime: 24, delayFeedback: 25, delayTone: 26,
+  reverbMix: 27, reverbSize: 28, reverbDamp: 29, reverbPredelay: 30,
 };
 
 export const SHAPE = { saw: 0, pulse: 1, triangle: 2 };
