@@ -34,18 +34,29 @@ export async function createEngine({ wasmUrl, workletUrl, context } = {}) {
   });
 
   const post = (m) => node.port.postMessage(m);
+  const api = { voices: 0 };
+  node.port.onmessage = (e) => {
+    if (e.data?.type === "stats") {
+      api.voices = e.data.voices;
+      api.onStats?.(e.data);
+    }
+  };
 
-  return {
+  return Object.assign(api, {
     context: ctx,
     node,
     resume: () => ctx.resume(),
     noteOn: (note, vel = 0.8) => post({ type: "noteOn", note, vel }),
     noteOff: (note) => post({ type: "noteOff", note }),
     allOff: () => post({ type: "allOff" }),
+    /** Schedule events at absolute context times. Applied on the exact frame. */
+    schedule: (events) => post({ type: "schedule", events }),
+    /** Drop everything pending and silence. */
+    clear: () => post({ type: "clear" }),
     setParam: (name, value) => {
       const id = PARAM[name];
       if (id === undefined) throw new Error(`unknown parameter: ${name}`);
       post({ type: "param", id, value });
     },
-  };
+  });
 }

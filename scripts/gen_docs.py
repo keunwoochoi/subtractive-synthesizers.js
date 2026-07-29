@@ -31,7 +31,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts" / "verify"))
 
 BLOCK = re.compile(
-    r"(<!-- generated:(?P<name>[a-z0-9-]+) -->\n)(?P<body>.*?)(<!-- /generated:(?P=name) -->)",
+    r"(<!-- generated:(?P<name>[a-z0-9-]+) -->\n?)(?P<body>.*?)(<!-- /generated:(?P=name) -->)",
     re.S,
 )
 
@@ -129,15 +129,28 @@ def gen_bundle() -> str:
     return "\n".join(rows) + "\n"
 
 
+def gen_bundle_total() -> str:
+    """Just the headline figure, for places that want one number inline."""
+    out = subprocess.run(["scripts/audit/bundle-size-audit.sh"],
+                         capture_output=True, text=True, cwd=ROOT)
+    for ln in out.stdout.splitlines():
+        parts = ln.split()
+        if parts[:1] == ["TOTAL"]:
+            return f"{int(parts[1]) / 1024:.1f} KB"
+    return "unknown"
+
+
 GENERATORS = {
     "bundle": gen_bundle,
+    "bundle-total": gen_bundle_total,
     "alias-table": gen_alias_table,
     "verdicts": gen_verdicts,
     "roster": gen_roster,
     "harness-stats": gen_harness_stats,
 }
 
-TARGETS = ["README.md", "agentic-docs/report/draft.md"]
+TARGETS = ["README.md", "apps/playground/showcase.html",
+           "agentic-docs/report/draft.md"]
 
 
 def render(path: Path) -> str:
@@ -147,7 +160,11 @@ def render(path: Path) -> str:
         name = m.group("name")
         if name not in GENERATORS:
             raise SystemExit(f"{path}: unknown generated block '{name}'")
-        return m.group(1) + GENERATORS[name]() + m.group(4)
+        body = GENERATORS[name]()
+        # Inline blocks (inside an HTML tag) must not gain a newline.
+        if m.group(1).endswith("-->\n") is False:
+            body = body.strip()
+        return m.group(1) + body + m.group(4)
 
     return BLOCK.sub(sub, text)
 
