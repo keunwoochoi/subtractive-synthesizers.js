@@ -346,6 +346,7 @@ pub unsafe extern "C" fn set_param(p: *mut Engine, id: u32, v: f32) {
         34 => e.patch.lfo_pitch_cents = v,
         35 => e.patch.lfo_cutoff_hz = v,
         36 => e.patch.lfo_pwm = v,
+        37 => e.patch.filter_kind = voice::FilterKind::from_u32(v as u32),
         _ => {}
     }
 }

@@ -23,6 +23,9 @@ jobs:
       - name: Build WASM
         run: cargo build -p subtractive-dsp --target wasm32-unknown-unknown --release
 
+      - name: Rust unit tests
+        run: cargo test -p subtractive-dsp --lib
+
       - name: Shipped WASM matches source, and the bundle is inside budget
         run: scripts/audit/bundle-size-audit.sh
 

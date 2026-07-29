@@ -3,7 +3,7 @@
 //! The signal path is fixed and curated (PRINCIPLES: "not a modular environment").
 //! What varies is the patch.
 
-use crate::filter::{tanh_fast, HalfBand, Ladder};
+use crate::filter::{tanh_fast, Diode, HalfBand, Ladder, Svf};
 use crate::flush_denormal;
 use crate::osc::{Noise, Osc, Shape};
 
@@ -96,9 +96,40 @@ impl Adsr {
 /// that is what the sound everyone means by "supersaw" actually has.
 pub const MAX_UNISON: usize = 7;
 
+/// Which filter is in the path. Six choices, not one -- the ladder alone was the whole
+/// "filter set" until now, and a bandpass or a notch is not a ladder with a different
+/// cutoff. Kinds 0-1 are the two 4-pole lowpass characters; 2-5 are the 2-pole
+/// state-variable outputs, all of which fall out of a single solve.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum FilterKind {
+    LadderLp,
+    DiodeLp,
+    SvfLp,
+    SvfBp,
+    SvfHp,
+    SvfNotch,
+}
+
+impl FilterKind {
+    pub fn from_u32(v: u32) -> Self {
+        match v {
+            1 => FilterKind::DiodeLp,
+            2 => FilterKind::SvfLp,
+            3 => FilterKind::SvfBp,
+            4 => FilterKind::SvfHp,
+            5 => FilterKind::SvfNotch,
+            _ => FilterKind::LadderLp,
+        }
+    }
+    fn is_svf(self) -> bool {
+        !matches!(self, FilterKind::LadderLp | FilterKind::DiodeLp)
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct Patch {
     pub shape: Shape,
+    pub filter_kind: FilterKind,
     pub unison: u32,
     pub glide_s: f32,
     /// LFO depths. Kept in the patch rather than the engine because how much vibrato a
@@ -125,6 +156,7 @@ impl Patch {
     pub const fn init() -> Self {
         Patch {
             shape: Shape::Saw,
+            filter_kind: FilterKind::LadderLp,
             unison: 2,
             glide_s: 0.0,
             lfo_pitch_cents: 0.0,
@@ -160,6 +192,8 @@ pub struct Voice {
     glide_c: f32,
     noise: Noise,
     filter: Ladder,
+    diode: Diode,
+    svf: Svf,
     amp_env: Adsr,
     flt_env: Adsr,
     f0: f32,
@@ -183,6 +217,8 @@ impl Voice {
             glide_c: 1.0,
             noise: Noise::new(1),
             filter: Ladder::new(),
+            diode: Diode::new(),
+            svf: Svf::new(),
             amp_env: Adsr::new(),
             flt_env: Adsr::new(),
             f0: 440.0,
@@ -223,6 +259,8 @@ impl Voice {
         };
 
         self.filter.reset();
+        self.diode.reset();
+        self.svf.reset();
         self.hb.reset();
         let (a, d, s, r) = patch.amp;
         self.amp_env.set(a, d, s, r, sr);
@@ -285,8 +323,13 @@ impl Voice {
             + self.vel * patch.vel_to_cutoff
             + lfo * patch.lfo_cutoff_hz)
             .clamp(20.0, sr2 * 0.45);
-        self.filter.set(cutoff, patch.resonance, patch.drive, sr2);
+        match patch.filter_kind {
+            FilterKind::LadderLp => self.filter.set(cutoff, patch.resonance, patch.drive, sr2),
+            FilterKind::DiodeLp => self.diode.set(cutoff, patch.resonance, patch.drive, sr2),
+            _ => self.svf.set(cutoff, patch.resonance, sr2),
+        }
 
+        let _ = patch.filter_kind.is_svf();
         let n = (patch.unison.max(1) as usize).min(MAX_UNISON);
         // Constant-power-ish normalisation: seven detuned saws are not seven times
         // louder than one, and scaling by 1/n would make wide unison disappear.
@@ -305,7 +348,23 @@ impl Voice {
             } else {
                 0.0
             };
-            half[k] = self.filter.process(oscs * norm + sub * 0.5 + nz * 0.3);
+            let mixed = oscs * norm + sub * 0.5 + nz * 0.3;
+            half[k] = match patch.filter_kind {
+                FilterKind::LadderLp => self.filter.process(mixed),
+                FilterKind::DiodeLp => self.diode.process(mixed),
+                kind => {
+                    // Drive is applied here for the SVF, which has no internal drive of
+                    // its own; without it, switching to a state-variable mode would
+                    // silently drop the level the ladder modes are voiced around.
+                    let (lp, bp, hp) = self.svf.process_all(mixed * patch.drive);
+                    match kind {
+                        FilterKind::SvfBp => bp,
+                        FilterKind::SvfHp => hp,
+                        FilterKind::SvfNotch => lp + hp,
+                        _ => lp,
+                    }
+                }
+            };
         }
         let filtered = self.hb.decimate(half[0], half[1]);
 

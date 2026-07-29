@@ -14,7 +14,7 @@ const SR = 48000;
 const P = { ampSustain: 12, ampRelease: 13, gain: 19, chorusRate: 20, chorusDepth: 21,
             chorusMix: 22, resonance: 6, cutoffHz: 5, drive: 7,
             delayMix: 23, delayTime: 24, delayFeedback: 25,
-            reverbMix: 27, reverbSize: 28 };
+            reverbMix: 27, reverbSize: 28, filterKind: 37 };
 
 const { instance } = await WebAssembly.instantiate(readFileSync(WASM), {});
 const x = instance.exports;
@@ -200,6 +200,59 @@ console.log("engine checks (shipped WASM)\n");
   const [, second] = peakIn(at(2 * T - 0.05) + srcI, at(2 * T + 0.05) + srcI);
   check(second > 1e-4 && second < repV, "feedback gives a quieter second repeat",
         `${repV.toExponential(2)} -> ${second.toExponential(2)}`);
+}
+
+// --- the filter set: six kinds must actually be six sounds
+{
+  const NAMES = ["ladder LP", "diode LP", "SVF LP", "SVF BP", "SVF HP", "SVF notch"];
+  // Band energy of a sustained saw through each filter, so the shapes are comparable.
+  const spectra = NAMES.map((_, kind) => {
+    const a = render(1.2, (e) => {
+      x.set_param(e, P.ampSustain, 0.9);
+      x.set_param(e, P.filterKind, kind);
+      x.set_param(e, P.cutoffHz, 700);
+      x.set_param(e, P.resonance, 0.55);
+      x.note_on(e, 45, 0.9);
+    });
+    const seg = a.subarray(SR / 2, SR / 2 + 16384);
+    // Crude 3-band split via successive one-poles: enough to tell a lowpass from a
+    // highpass from a bandpass without pulling in an FFT here.
+    let lo = 0, mid = 0, hi = 0, s1 = 0, s2 = 0;
+    for (let i = 0; i < seg.length; i++) {
+      s1 += 0.02 * (seg[i] - s1);          // ~150 Hz
+      s2 += 0.18 * (seg[i] - s2);          // ~1.5 kHz
+      lo += s1 * s1; mid += (s2 - s1) ** 2; hi += (seg[i] - s2) ** 2;
+    }
+    const t = lo + mid + hi;
+    return { lo: lo / t, mid: mid / t, hi: hi / t, rms: rms(seg), finite: allFinite(a),
+             peak: peak(a) };
+  });
+
+  spectra.forEach((s, i) => {
+    check(s.finite && s.peak <= 1.0, `${NAMES[i]} is stable and inside full scale`,
+          `peak ${s.peak.toFixed(3)}`);
+  });
+  check(spectra.every((s) => s.rms > 0.005), "every filter kind produces sound",
+        spectra.map((s) => s.rms.toFixed(3)).join(" "));
+
+  const [lad, dio, svfLp, svfBp, svfHp, notch] = spectra;
+  check(svfHp.hi > svfLp.hi * 2, "SVF highpass keeps highs the lowpass removes",
+        `hi ${svfLp.hi.toFixed(3)} LP vs ${svfHp.hi.toFixed(3)} HP`);
+  check(svfBp.lo < svfLp.lo * 0.25, "SVF bandpass rejects lows the lowpass passes",
+        `lo ${svfLp.lo.toFixed(3)} LP vs ${svfBp.lo.toFixed(3)} BP`);
+  // NOT asserted here: the shape of the notch. Band-energy fractions cannot separate a
+  // narrow notch from a lowpass when the source is a low sawtooth -- most of the energy
+  // is below cutoff either way, so both read as "lots of low". The first version of this
+  // check claimed the notch was broken; a direct magnitude-response test in Rust
+  // (crates/dsp/src/filter.rs) showed it dips at cutoff and passes both sides correctly.
+  // Response SHAPE is owned by that test; this file owns engine-level behaviour.
+  check(Math.abs(notch.hi - svfHp.hi) > 0.3, "notch is not merely the highpass",
+        `hi ${notch.hi.toFixed(3)} vs ${svfHp.hi.toFixed(3)}`);
+  // The two 4-pole characters must not be the same filter with a different name.
+  const diff = Math.abs(lad.lo - dio.lo) + Math.abs(lad.mid - dio.mid)
+             + Math.abs(lad.hi - dio.hi);
+  check(diff > 0.02, "diode ladder differs from the transistor ladder",
+        `band-balance distance ${diff.toFixed(3)}`);
 }
 
 console.log();

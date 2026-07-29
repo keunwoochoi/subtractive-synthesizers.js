@@ -81,6 +81,16 @@ try {
   const after = await p.evaluate(() => window.__ev.filter(m => m.type === "schedule").length);
   if (after > 0) fail("arp kept scheduling after being switched off");
 
+  // The filter selector is a <select>, not a range, so it takes a separate code path
+  // to the engine. Exercising every kind here catches a wiring break that would
+  // otherwise only show up as "the filter menu does nothing".
+  for (let k = 0; k < 6; k++) {
+    await p.selectOption("#filterKind", String(k));
+    await p.waitForTimeout(60);
+  }
+  const kindErr = errs.filter((e) => /unknown parameter|filterKind/.test(e));
+  if (kindErr.length) fail("filter type wiring: " + kindErr[0]);
+
   if (errs.length) fail("page errors: " + errs.slice(0, 3).join(" | "));
-  console.log("ARP OK — cycles held notes, respects mode and octave range, stops cleanly");
+  console.log("ARP OK — cycles held notes, respects mode and octave range, stops cleanly; all 6 filter types wire through");
 } finally { await b.close(); server.kill(); }

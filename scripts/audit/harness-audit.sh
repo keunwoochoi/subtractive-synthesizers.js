@@ -44,6 +44,10 @@ echo "== proving verify-spec rejects cheats =="
 run_tests scripts/verify/test_verify_spec.py
 
 echo
+echo "== rust unit tests (filter response shapes) =="
+if command -v cargo >/dev/null 2>&1; then cargo test -q -p subtractive-dsp --lib 2>&1 | tail -3; else echo "cargo not installed; skipping"; fi
+
+echo
 echo "== engine checks (stability, headroom, effects) =="
 node scripts/verify/check_engine.mjs | tail -3
 

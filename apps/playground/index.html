@@ -3,139 +3,261 @@
 <title>subtractive-synthesizers.js</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  :root {
-    --bg:#0e1013; --panel:#171a1f; --line:#272c34; --ink:#e8eaed; --dim:#9aa3ad;
-    --accent:#ffb454; --accent2:#4fc3f7;
+  :root{
+    --bg:#0b0d11; --panel:#151920; --line:#252b35; --ink:#e9ecf1; --dim:#8b95a3;
+    --audio:#ffb454;   /* things that carry sound */
+    --mod:#5ad1ff;     /* things that shape it but are never heard */
+    --fx:#7ee787;      /* the send chain */
+    --play:#c39bff;    /* input, not synthesis */
   }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink);
-         font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }
-  header { padding:28px 24px 12px; border-bottom:1px solid var(--line); }
-  h1 { margin:0; font-size:18px; letter-spacing:.02em; font-weight:600; }
-  h1 span { color:var(--accent); }
-  .sub { color:var(--dim); margin-top:6px; font-size:13px; }
-  main { max-width:960px; margin:0 auto; padding:22px 24px 60px; }
-  .panels { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; }
-  .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px 16px; }
-  .panel h2 { margin:0 0 12px; font-size:11px; letter-spacing:.12em;
-              text-transform:uppercase; color:var(--dim); font-weight:600; }
-  .row { display:flex; align-items:center; gap:10px; margin:9px 0; }
-  .row label { flex:0 0 84px; color:var(--dim); font-size:12px; }
-  .row output { flex:0 0 58px; text-align:right; color:var(--accent2); font-size:12px; }
-  input[type=range]{ flex:1; accent-color:var(--accent); min-width:0; }
-  select { background:#0b0d10; color:var(--ink); border:1px solid var(--line);
-           border-radius:5px; padding:4px 8px; font:inherit; font-size:12px; flex:1; }
-  #start { margin-top:18px; background:var(--accent); color:#1a1205; border:0;
-           border-radius:6px; padding:12px 22px; font:inherit; font-weight:700;
-           cursor:pointer; font-size:14px; }
-  #start[disabled]{ opacity:.45; cursor:default; }
-  #kb { margin-top:22px; position:relative; height:150px; user-select:none;
-        touch-action:none; border:1px solid var(--line); border-radius:8px;
-        overflow:hidden; background:var(--panel); }
-  .wk { position:absolute; top:0; bottom:0; background:#f2f4f6; border-right:1px solid #c3c8cf; }
-  .wk.on { background:var(--accent); }
-  .bk { position:absolute; top:0; height:62%; background:#14171b; border-radius:0 0 3px 3px;
-        border:1px solid #000; z-index:2; }
-  .bk.on { background:var(--accent); }
-  .hint { color:var(--dim); font-size:12px; margin-top:10px; }
-  code { color:var(--accent2); }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:13.5px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace}
+  header{padding:22px 24px 16px;border-bottom:1px solid var(--line)}
+  h1{margin:0;font-size:18px;font-weight:600;letter-spacing:.01em}
+  h1 span{color:var(--audio)}
+  main{max-width:1120px;margin:0 auto;padding:18px 24px 70px}
+
+  /* --- signal flow map ------------------------------------------------------ */
+  .flow{background:var(--panel);border:1px solid var(--line);border-radius:9px;
+        padding:16px 18px 14px;margin-bottom:18px;overflow-x:auto}
+  .flow .chain{display:flex;align-items:center;gap:0;min-width:560px}
+  .node{border:1px solid var(--line);border-radius:6px;padding:7px 13px;
+        font-size:12px;white-space:nowrap;background:#0e1218;color:var(--dim)}
+  .node b{display:block;font-size:12.5px;color:var(--ink);font-weight:600}
+  .node.audio{border-color:var(--audio)} .node.audio b{color:var(--audio)}
+  .node.fx{border-color:var(--fx)} .node.fx b{color:var(--fx)}
+  .arrow{color:var(--dim);padding:0 9px;font-size:14px}
+  .mods{display:flex;gap:0;margin-top:9px;min-width:560px;align-items:flex-start}
+  .modline{font-size:11.5px;color:var(--mod);white-space:nowrap;
+           border-left:1px solid var(--mod);padding:3px 0 0 8px;margin-right:22px;opacity:.9}
+  .legend{margin-top:12px;font-size:11.5px;color:var(--dim);display:flex;
+          gap:16px;flex-wrap:wrap}
+  .legend i{font-style:normal;padding-left:14px;position:relative}
+  .legend i::before{content:"";position:absolute;left:0;top:6px;width:8px;height:8px;
+                    border-radius:2px}
+  .legend .a::before{background:var(--audio)} .legend .m::before{background:var(--mod)}
+  .legend .f::before{background:var(--fx)}    .legend .p::before{background:var(--play)}
+
+  /* --- panels --------------------------------------------------------------- */
+  .stage{margin-bottom:16px}
+  .stage > h3{margin:0 0 9px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+              color:var(--dim);font-weight:600}
+  .panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(238px,1fr));gap:12px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+         padding:13px 15px;border-top-width:2px}
+  .panel.audio{border-top-color:var(--audio)}
+  .panel.mod{border-top-color:var(--mod)}
+  .panel.fx{border-top-color:var(--fx)}
+  .panel.play{border-top-color:var(--play)}
+  .panel h2{margin:0 0 3px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+            color:var(--ink);font-weight:600}
+  .panel .to{margin:0 0 11px;font-size:11px;color:var(--dim)}
+  .panel .to b{color:var(--mod);font-weight:400}
+  .row{display:flex;align-items:center;gap:9px;margin:8px 0}
+  .row label{flex:0 0 78px;color:var(--dim);font-size:11.5px}
+  .row output{flex:0 0 52px;text-align:right;color:var(--mod);font-size:11.5px}
+  input[type=range]{flex:1;accent-color:var(--audio);min-width:0}
+  .panel.mod input[type=range]{accent-color:var(--mod)}
+  .panel.fx input[type=range]{accent-color:var(--fx)}
+  .panel.play input[type=range]{accent-color:var(--play)}
+  /* the arp is alone in its row; let it size to content rather than stretch */
+  .stage.solo .panels{grid-template-columns:repeat(auto-fit,minmax(238px,320px));
+                      justify-content:start}
+  select{background:#0b0d10;color:var(--ink);border:1px solid var(--line);
+         border-radius:5px;padding:4px 8px;font:inherit;font-size:11.5px;flex:1}
+  #start{background:var(--audio);color:#1a1205;border:0;border-radius:7px;
+         padding:11px 22px;font:inherit;font-weight:700;cursor:pointer;font-size:14px}
+  #start[disabled]{opacity:.45;cursor:default}
+  .bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+  .hint{color:var(--dim);font-size:12px}
+  #kb{margin-top:18px;position:relative;height:150px;user-select:none;touch-action:none;
+      border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+  .wk{position:absolute;top:0;bottom:0;background:#f2f4f6;border-right:1px solid #c3c8cf}
+  .wk.on{background:var(--audio)}
+  .bk{position:absolute;top:0;height:62%;background:#14171b;border-radius:0 0 3px 3px;
+      border:1px solid #000;z-index:2}
+  .bk.on{background:var(--audio)}
+  code{color:var(--mod)}
+  a{color:var(--mod)}
 </style>
 
 <header>
   <h1>subtractive<span>-synthesizers</span>.js</h1>
-  <div class="sub">Analog-style subtractive synthesis, computed on the fly. No samples.</div>
 </header>
 
 <main>
-  <button id="start">▶ Start audio</button>
-  <div class="hint" id="status">Click to create the AudioContext (browsers require a gesture).</div>
+  <div class="bar">
+    <button id="start">▶ Start audio</button>
+    <div class="hint" id="status">Click to create the AudioContext (browsers require a gesture).</div>
+  </div>
 
-  <div class="panels" style="margin-top:20px">
-    <div class="panel">
-      <h2>Oscillator</h2>
-      <div class="row"><label>shape</label>
-        <select id="shape"><option value="0">saw</option><option value="1">pulse</option>
-        <option value="2">triangle</option></select></div>
-      <div class="row"><label>detune</label><input type="range" id="detuneCents" data-param min="0" max="40" step="0.5" value="8"><output>8</output></div>
-      <div class="row"><label>pulse w</label><input type="range" id="pulseWidth" data-param min="0.05" max="0.95" step="0.01" value="0.5"><output>0.50</output></div>
-      <div class="row"><label>sub</label><input type="range" id="subLevel" data-param min="0" max="1" step="0.01" value="0.35"><output>0.35</output></div>
-      <div class="row"><label>noise</label><input type="range" id="noiseLevel" data-param min="0" max="1" step="0.01" value="0"><output>0.00</output></div>
-      <div class="row"><label>unison</label><input type="range" id="unison" data-param min="1" max="7" step="1" value="2"><output>2</output></div>
-      <div class="row"><label>glide</label><input type="range" id="glide" data-param min="0" max="0.4" step="0.005" value="0"><output>0.00</output></div>
+  <div class="flow">
+    <div class="chain">
+      <div class="node audio"><b>OSC</b>saw / pulse / tri<br>+ sub + noise</div>
+      <div class="arrow">──▶</div>
+      <div class="node audio"><b>FILTER</b>ladder / diode / SVF</div>
+      <div class="arrow">──▶</div>
+      <div class="node audio"><b>VCA</b>level</div>
+      <div class="arrow">──▶</div>
+      <div class="node fx"><b>FX</b>chorus ▸ delay ▸ reverb</div>
+      <div class="arrow">──▶</div>
+      <div class="node"><b>OUT</b>limiter</div>
     </div>
-
-    <div class="panel">
-      <h2>LFO</h2>
-      <div class="row"><label>rate</label><input type="range" id="lfoRate" data-param min="0.05" max="16" step="0.05" value="5"><output>5.00</output></div>
-      <div class="row"><label>→ pitch</label><input type="range" id="lfoToPitch" data-param min="0" max="60" step="1" value="0"><output>0</output></div>
-      <div class="row"><label>→ cutoff</label><input type="range" id="lfoToCutoff" data-param min="0" max="3000" step="25" value="0"><output>0</output></div>
-      <div class="row"><label>→ pulse w</label><input type="range" id="lfoToPwm" data-param min="0" max="0.45" step="0.01" value="0"><output>0.00</output></div>
+    <div class="mods">
+      <div class="modline">▲ LFO → pitch, PWM</div>
+      <div class="modline">▲ LFO → cutoff &nbsp;▲ filter env → cutoff &nbsp;▲ velocity → cutoff</div>
+      <div class="modline">▲ amp env</div>
     </div>
-
-    <div class="panel">
-      <h2>Filter — ladder</h2>
-      <div class="row"><label>cutoff</label><input type="range" id="cutoffHz" data-param min="60" max="8000" step="10" value="1200"><output>1200</output></div>
-      <div class="row"><label>resonance</label><input type="range" id="resonance" data-param min="0" max="1" step="0.01" value="0.35"><output>0.35</output></div>
-      <div class="row"><label>drive</label><input type="range" id="drive" data-param min="0.5" max="4" step="0.05" value="1.2"><output>1.20</output></div>
-      <div class="row"><label>env amt</label><input type="range" id="envAmount" data-param min="0" max="8000" step="50" value="3200"><output>3200</output></div>
-      <div class="row"><label>key trk</label><input type="range" id="keyTrack" data-param min="0" max="1" step="0.01" value="0.35"><output>0.35</output></div>
+    <div class="legend">
+      <i class="a">audio path — carries sound</i>
+      <i class="m">modulation — shapes it, never heard</i>
+      <i class="f">effects</i>
+      <i class="p">how notes get in</i>
     </div>
+  </div>
 
-    <div class="panel">
-      <h2>Amp envelope</h2>
-      <div class="row"><label>attack</label><input type="range" id="ampAttack" data-param min="0.001" max="2" step="0.001" value="0.005"><output>0.005</output></div>
-      <div class="row"><label>decay</label><input type="range" id="ampDecay" data-param min="0.005" max="2" step="0.005" value="0.2"><output>0.20</output></div>
-      <div class="row"><label>sustain</label><input type="range" id="ampSustain" data-param min="0" max="1" step="0.01" value="0.75"><output>0.75</output></div>
-      <div class="row"><label>release</label><input type="range" id="ampRelease" data-param min="0.005" max="3" step="0.005" value="0.25"><output>0.25</output></div>
+  <div class="stage">
+    <h3>1 · Audio path</h3>
+    <div class="panels">
+      <div class="panel audio">
+        <h2>Oscillator</h2>
+        <p class="to">the source — everything downstream only removes</p>
+        <div class="row"><label>shape</label>
+          <select id="shape"><option value="0">saw</option><option value="1">pulse</option>
+          <option value="2">triangle</option></select></div>
+        <div class="row"><label>unison</label><input type="range" id="unison" data-param min="1" max="7" step="1" value="2"><output>2</output></div>
+        <div class="row"><label>detune</label><input type="range" id="detuneCents" data-param min="0" max="40" step="0.5" value="8"><output>8</output></div>
+        <div class="row"><label>pulse w</label><input type="range" id="pulseWidth" data-param min="0.05" max="0.95" step="0.01" value="0.5"><output>0.50</output></div>
+        <div class="row"><label>sub</label><input type="range" id="subLevel" data-param min="0" max="1" step="0.01" value="0.35"><output>0.35</output></div>
+        <div class="row"><label>noise</label><input type="range" id="noiseLevel" data-param min="0" max="1" step="0.01" value="0"><output>0.00</output></div>
+        <div class="row"><label>glide</label><input type="range" id="glide" data-param min="0" max="0.4" step="0.005" value="0"><output>0.00</output></div>
+      </div>
+
+      <div class="panel audio">
+        <h2>Filter</h2>
+        <p class="to">where the character is — driven by <b>filter env</b>, <b>LFO</b>, <b>velocity</b></p>
+        <div class="row"><label>type</label>
+          <select id="filterKind">
+            <option value="0">ladder LP · 24 dB</option>
+            <option value="1">diode LP · acid</option>
+            <option value="2">SVF LP · 12 dB</option>
+            <option value="3">SVF bandpass</option>
+            <option value="4">SVF highpass</option>
+            <option value="5">SVF notch</option>
+          </select></div>
+        <div class="row"><label>cutoff</label><input type="range" id="cutoffHz" data-param min="60" max="8000" step="10" value="1200"><output>1200</output></div>
+        <div class="row"><label>resonance</label><input type="range" id="resonance" data-param min="0" max="1" step="0.01" value="0.35"><output>0.35</output></div>
+        <div class="row"><label>drive</label><input type="range" id="drive" data-param min="0.5" max="4" step="0.05" value="1.2"><output>1.20</output></div>
+        <div class="row"><label>env amt</label><input type="range" id="envAmount" data-param min="0" max="8000" step="50" value="3200"><output>3200</output></div>
+        <div class="row"><label>vel amt</label><input type="range" id="velToCutoff" data-param min="0" max="6000" step="50" value="2400"><output>2400</output></div>
+        <div class="row"><label>key trk</label><input type="range" id="keyTrack" data-param min="0" max="1" step="0.01" value="0.35"><output>0.35</output></div>
+      </div>
+
+      <div class="panel audio">
+        <h2>Amp</h2>
+        <p class="to">final level — driven by <b>amp env</b> and velocity</p>
+        <div class="row"><label>output</label><input type="range" id="gain" data-param min="0" max="0.8" step="0.01" value="0.35"><output>0.35</output></div>
+      </div>
     </div>
+  </div>
 
-    <div class="panel">
-      <h2>Filter envelope</h2>
-      <div class="row"><label>attack</label><input type="range" id="fltAttack" data-param min="0.001" max="2" step="0.001" value="0.002"><output>0.002</output></div>
-      <div class="row"><label>decay</label><input type="range" id="fltDecay" data-param min="0.005" max="2" step="0.005" value="0.35"><output>0.35</output></div>
-      <div class="row"><label>sustain</label><input type="range" id="fltSustain" data-param min="0" max="1" step="0.01" value="0.3"><output>0.30</output></div>
-      <div class="row"><label>release</label><input type="range" id="fltRelease" data-param min="0.005" max="3" step="0.005" value="0.25"><output>0.25</output></div>
+  <div class="stage">
+    <h3>2 · Modulation — never heard directly</h3>
+    <div class="panels">
+      <div class="panel mod">
+        <h2>Filter envelope</h2>
+        <p class="to">→ <b>cutoff</b>, scaled by the filter's <b>env amt</b></p>
+        <div class="row"><label>attack</label><input type="range" id="fltAttack" data-param min="0.001" max="2" step="0.001" value="0.002"><output>0.002</output></div>
+        <div class="row"><label>decay</label><input type="range" id="fltDecay" data-param min="0.005" max="2" step="0.005" value="0.35"><output>0.35</output></div>
+        <div class="row"><label>sustain</label><input type="range" id="fltSustain" data-param min="0" max="1" step="0.01" value="0.3"><output>0.30</output></div>
+        <div class="row"><label>release</label><input type="range" id="fltRelease" data-param min="0.005" max="3" step="0.005" value="0.25"><output>0.25</output></div>
+      </div>
+
+      <div class="panel mod">
+        <h2>Amp envelope</h2>
+        <p class="to">→ <b>VCA</b> — the shape of a note in time</p>
+        <div class="row"><label>attack</label><input type="range" id="ampAttack" data-param min="0.001" max="2" step="0.001" value="0.005"><output>0.005</output></div>
+        <div class="row"><label>decay</label><input type="range" id="ampDecay" data-param min="0.005" max="2" step="0.005" value="0.2"><output>0.20</output></div>
+        <div class="row"><label>sustain</label><input type="range" id="ampSustain" data-param min="0" max="1" step="0.01" value="0.75"><output>0.75</output></div>
+        <div class="row"><label>release</label><input type="range" id="ampRelease" data-param min="0.005" max="3" step="0.005" value="0.25"><output>0.25</output></div>
+      </div>
+
+      <div class="panel mod">
+        <h2>LFO</h2>
+        <p class="to">→ <b>pitch</b>, <b>cutoff</b>, <b>pulse width</b> — one shared triangle</p>
+        <div class="row"><label>rate</label><input type="range" id="lfoRate" data-param min="0.05" max="16" step="0.05" value="5"><output>5.00</output></div>
+        <div class="row"><label>→ pitch</label><input type="range" id="lfoToPitch" data-param min="0" max="60" step="1" value="0"><output>0</output></div>
+        <div class="row"><label>→ cutoff</label><input type="range" id="lfoToCutoff" data-param min="0" max="3000" step="25" value="0"><output>0</output></div>
+        <div class="row"><label>→ pulse w</label><input type="range" id="lfoToPwm" data-param min="0" max="0.45" step="0.01" value="0"><output>0.00</output></div>
+      </div>
     </div>
+  </div>
 
-    <div class="panel">
-      <h2>Effects</h2>
-      <div class="row"><label>chorus</label><input type="range" id="chorusMix" data-param min="0" max="1" step="0.01" value="0"><output>0.00</output></div>
-      <div class="row"><label>delay</label><input type="range" id="delayMix" data-param min="0" max="1" step="0.01" value="0"><output>0.00</output></div>
-      <div class="row"><label>dly time</label><input type="range" id="delayTime" data-param min="0.02" max="1" step="0.005" value="0.25"><output>0.25</output></div>
-      <div class="row"><label>dly fb</label><input type="range" id="delayFeedback" data-param min="0" max="0.92" step="0.01" value="0.35"><output>0.35</output></div>
-      <div class="row"><label>reverb</label><input type="range" id="reverbMix" data-param min="0" max="1" step="0.01" value="0"><output>0.00</output></div>
-      <div class="row"><label>rev size</label><input type="range" id="reverbSize" data-param min="0" max="1" step="0.01" value="0.6"><output>0.60</output></div>
-      <div class="row"><label>rev damp</label><input type="range" id="reverbDamp" data-param min="800" max="14000" step="100" value="4200"><output>4200</output></div>
+  <div class="stage">
+    <h3>3 · Effects — after the voice, before the output</h3>
+    <div class="panels">
+      <div class="panel fx">
+        <h2>Chorus</h2>
+        <p class="to">three-phase ensemble — width</p>
+        <div class="row"><label>mix</label><input type="range" id="chorusMix" data-param min="0" max="1" step="0.01" value="0"><output>0.00</output></div>
+        <div class="row"><label>rate</label><input type="range" id="chorusRate" data-param min="0.05" max="6" step="0.01" value="0.6"><output>0.60</output></div>
+        <div class="row"><label>depth</label><input type="range" id="chorusDepth" data-param min="0" max="12" step="0.1" value="3"><output>3.0</output></div>
+      </div>
+      <div class="panel fx">
+        <h2>Delay</h2>
+        <p class="to">damped repeats — rhythm</p>
+        <div class="row"><label>mix</label><input type="range" id="delayMix" data-param min="0" max="1" step="0.01" value="0"><output>0.00</output></div>
+        <div class="row"><label>time</label><input type="range" id="delayTime" data-param min="0.02" max="1" step="0.005" value="0.25"><output>0.25</output></div>
+        <div class="row"><label>feedback</label><input type="range" id="delayFeedback" data-param min="0" max="0.92" step="0.01" value="0.35"><output>0.35</output></div>
+        <div class="row"><label>tone</label><input type="range" id="delayTone" data-param min="400" max="16000" step="100" value="3200"><output>3200</output></div>
+      </div>
+      <div class="panel fx">
+        <h2>Reverb</h2>
+        <p class="to">the space it sits in</p>
+        <div class="row"><label>mix</label><input type="range" id="reverbMix" data-param min="0" max="1" step="0.01" value="0"><output>0.00</output></div>
+        <div class="row"><label>size</label><input type="range" id="reverbSize" data-param min="0" max="1" step="0.01" value="0.6"><output>0.60</output></div>
+        <div class="row"><label>damping</label><input type="range" id="reverbDamp" data-param min="800" max="14000" step="100" value="4200"><output>4200</output></div>
+        <div class="row"><label>predelay</label><input type="range" id="reverbPredelay" data-param min="0" max="100" step="1" value="18"><output>18</output></div>
+      </div>
     </div>
+  </div>
 
-    <div class="panel">
-      <h2>Arpeggiator <span style="color:#5a6270;font-weight:400;text-transform:none;letter-spacing:0">— demo only</span></h2>
-      <div class="row"><label>enable</label>
-        <select id="arpOn"><option value="0">off</option><option value="1">on</option></select></div>
-      <div class="row"><label>mode</label>
-        <select id="arpMode">
-          <option value="up">up</option><option value="down">down</option>
-          <option value="updown">up / down</option><option value="played">as played</option>
-          <option value="random">random</option></select></div>
-      <div class="row"><label>rate</label>
-        <select id="arpRate">
-          <option value="4">1/4</option><option value="8">1/8</option>
-          <option value="12">1/8 triplet</option><option value="16" selected>1/16</option>
-          <option value="24">1/16 triplet</option></select></div>
-      <div class="row"><label>tempo</label><input type="range" id="arpBpm" min="60" max="200" step="1" value="120"><output>120</output></div>
-      <div class="row"><label>octaves</label><input type="range" id="arpOct" min="1" max="4" step="1" value="1"><output>1</output></div>
-      <div class="row"><label>gate</label><input type="range" id="arpGate" min="0.1" max="1" step="0.05" value="0.55"><output>0.55</output></div>
-      <div class="row"><label>hold</label>
-        <select id="arpHold"><option value="0">off</option><option value="1">latch</option></select></div>
+  <div class="stage solo">
+    <h3>4 · Playing — generates notes, not sound</h3>
+    <div class="panels">
+      <div class="panel play">
+        <h2>Arpeggiator</h2>
+        <p class="to">holds a chord and plays it as notes — lives in this demo, not in the library</p>
+        <div class="row"><label>enable</label>
+          <select id="arpOn"><option value="0">off</option><option value="1">on</option></select></div>
+        <div class="row"><label>mode</label>
+          <select id="arpMode">
+            <option value="up">up</option><option value="down">down</option>
+            <option value="updown">up / down</option><option value="played">as played</option>
+            <option value="random">random</option></select></div>
+        <div class="row"><label>rate</label>
+          <select id="arpRate">
+            <option value="4">1/4</option><option value="8">1/8</option>
+            <option value="12">1/8 triplet</option><option value="16" selected>1/16</option>
+            <option value="24">1/16 triplet</option></select></div>
+        <div class="row"><label>tempo</label><input type="range" id="arpBpm" min="60" max="200" step="1" value="120"><output>120</output></div>
+        <div class="row"><label>octaves</label><input type="range" id="arpOct" min="1" max="4" step="1" value="1"><output>1</output></div>
+        <div class="row"><label>gate</label><input type="range" id="arpGate" min="0.1" max="1" step="0.05" value="0.55"><output>0.55</output></div>
+        <div class="row"><label>hold</label>
+          <select id="arpHold"><option value="0">off</option><option value="1">latch</option></select></div>
+      </div>
     </div>
-
   </div>
 
   <div id="kb"></div>
-  <div class="hint">Play with the mouse, or type <code>a w s e d f t g y h u j k</code> — <code>z</code>/<code>x</code> shift octave.</div>
+  <div class="hint" style="margin-top:10px">Play with the mouse, or type
+    <code>a w s e d f t g y h u j k</code> — <code>z</code>/<code>x</code> shift octave.
+    <a href="./showcase.html">showcase →</a></div>
 </main>
 
 <script type="module">
+
 import { createEngine, PARAM } from "../../packages/core/src/index.js";
 
 const LOW = 48, N_KEYS = 25;
@@ -285,8 +407,10 @@ for (const el of document.querySelectorAll("input[type=range]")) {
     if (el.hasAttribute("data-param")) engine?.setParam(el.id, Number(el.value));
   });
 }
-document.getElementById("shape").addEventListener("change", (e) =>
-  engine?.setParam("shape", Number(e.target.value)));
+for (const id of ["shape", "filterKind"]) {
+  document.getElementById(id).addEventListener("change", (e) =>
+    engine?.setParam(id, Number(e.target.value)));
+}
 
 for (const [id, key, cast] of [["arpMode","mode",String],["arpRate","rate",Number],
                                ["arpHold","hold",(v)=>v==="1"]]) {
@@ -317,6 +441,8 @@ document.getElementById("start").addEventListener("click", async (e) => {
     await engine.resume();
     for (const el of document.querySelectorAll("input[type=range][data-param]"))
       engine.setParam(el.id, Number(el.value));
+    for (const id of ["shape", "filterKind"])
+      engine.setParam(id, Number(document.getElementById(id).value));
     status.textContent = `ready — ${engine.context.sampleRate} Hz. Play the keyboard.`;
   } catch (err) {
     status.textContent = `failed: ${err.message}`;

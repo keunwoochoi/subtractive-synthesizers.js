@@ -107,9 +107,11 @@ impl Svf {
         self.r = 1.0 - res.clamp(0.0, 0.98);
     }
 
-    /// Returns the lowpass output; band and high are available from the same solve.
+    /// One solve, all four outputs. Highpass and bandpass are free once the state-variable
+    /// equations are resolved -- charging for them separately would mean running the
+    /// filter twice for a notch.
     #[inline]
-    pub fn process(&mut self, x: f32) -> f32 {
+    pub fn process_all(&mut self, x: f32) -> (f32, f32, f32) {
         let g = self.g;
         let denom = 1.0 + 2.0 * self.r * g + g * g;
         let hp = (x - (2.0 * self.r + g) * self.s1 - self.s2) / denom;
@@ -117,7 +119,91 @@ impl Svf {
         let lp = g * bp + self.s2;
         self.s1 = flush_denormal(g * hp + bp);
         self.s2 = flush_denormal(g * bp + lp);
-        lp
+        (lp, bp, hp)
+    }
+
+    #[inline]
+    pub fn process(&mut self, x: f32) -> f32 {
+        self.process_all(x).0
+    }
+}
+
+/// Diode-ladder lowpass — the acid voice.
+///
+/// A transistor ladder and a diode ladder are not interchangeable, and the difference is
+/// the whole reason a 303-style line sounds like itself: the diode ladder's stages load
+/// each other, so its poles are not evenly spaced, its resonance is fiercer and less
+/// linear, and it keeps more low end when resonance is up instead of thinning out.
+///
+/// HONEST LABEL: this is a VOICED APPROXIMATION, not a circuit model. It reproduces the
+/// behaviours above with unequal stage gains and an asymmetric feedback shaper; it does
+/// not solve the diode equations. `scripts/verify/check_engine.mjs` asserts it measurably
+/// differs from the transistor ladder rather than claiming authenticity.
+#[derive(Clone, Copy)]
+pub struct Diode {
+    g: [f32; 4],
+    k: f32,
+    drive: f32,
+    s: [f32; 4],
+}
+
+impl Diode {
+    pub const fn new() -> Self {
+        Diode { g: [0.0; 4], k: 0.0, drive: 1.0, s: [0.0; 4] }
+    }
+
+    pub fn reset(&mut self) {
+        self.s = [0.0; 4];
+    }
+
+    pub fn set(&mut self, cutoff_hz: f32, res: f32, drive: f32, sr: f32) {
+        let fc = cutoff_hz.clamp(20.0, sr * 0.45);
+        let base = (PI * fc / sr).tan();
+        // Successive stages run progressively faster. Even spacing is what makes a
+        // transistor ladder smooth; the unevenness here is the squelch.
+        const SPREAD: [f32; 4] = [1.0, 0.72, 0.58, 0.5];
+        let mut i = 0;
+        while i < 4 {
+            let g = base * SPREAD[i];
+            self.g[i] = g / (1.0 + g);
+            i += 1;
+        }
+        self.k = 5.2 * res.clamp(0.0, 1.0);
+        self.drive = drive.max(0.1);
+    }
+
+    #[inline]
+    pub fn process(&mut self, x: f32) -> f32 {
+        let mut sigma = self.s[3] * (1.0 - self.g[3]);
+        let mut gp = self.g[3];
+        let mut i = 2;
+        loop {
+            sigma += gp * self.s[i] * (1.0 - self.g[i]);
+            gp *= self.g[i];
+            if i == 0 {
+                break;
+            }
+            i -= 1;
+        }
+        let gall = self.g[0] * self.g[1] * self.g[2] * self.g[3];
+
+        let u = x * self.drive;
+        let y = (gall * u + sigma) / (1.0 + self.k * gall);
+
+        // Asymmetric saturation: diodes conduct one way. This is what gives the acid
+        // squelch its buzz instead of the ladder's smooth compression.
+        let sat = tanh_fast(y * 1.3 + 0.15 * y * y);
+        let mut v = u - self.k * sat;
+
+        let mut j = 0;
+        while j < 4 {
+            let a = (v - self.s[j]) * self.g[j];
+            let yj = a + self.s[j];
+            self.s[j] = flush_denormal(yj + a);
+            v = yj;
+            j += 1;
+        }
+        v
     }
 }
 
@@ -205,5 +291,83 @@ impl HalfBand {
         // compensate for taps that summed to 0.387, which then doubled the output the
         // moment the coefficients were corrected.
         crate::flush_denormal(y)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Steady-state magnitude of `f` at `hz`, by driving a sine and measuring the
+    /// amplitude after transients settle. Slower than an impulse response but immune to
+    /// the windowing choices that made the band-energy estimate ambiguous.
+    fn mag(hz: f32, sr: f32, mut f: impl FnMut(f32) -> f32) -> f32 {
+        let n = (sr / hz * 200.0) as usize;
+        let mut peak = 0.0f32;
+        for i in 0..n {
+            let x = (core::f32::consts::TAU * hz * i as f32 / sr).sin();
+            let y = f(x);
+            if i > n / 2 {
+                peak = peak.max(y.abs());
+            }
+        }
+        peak
+    }
+
+    #[test]
+    fn svf_outputs_have_the_shapes_their_names_claim() {
+        let sr = 48_000.0;
+        let fc = 1_000.0;
+        for &(name, pick) in &[
+            ("lp", 0usize),
+            ("bp", 1),
+            ("hp", 2),
+        ] {
+            let m = |hz: f32| {
+                let mut s = Svf::new();
+                s.set(fc, 0.0, sr);
+                mag(hz, sr, |x| {
+                    let (lp, bp, hp) = s.process_all(x);
+                    [lp, bp, hp][pick]
+                })
+            };
+            let (low, at, high) = (m(fc / 8.0), m(fc), m(fc * 8.0));
+            match name {
+                "lp" => {
+                    assert!(low > 0.7, "lp passband {low}");
+                    assert!(high < 0.1, "lp stopband {high}");
+                }
+                "bp" => {
+                    assert!(at > low * 2.0 && at > high * 2.0, "bp {low} {at} {high}");
+                }
+                "hp" => {
+                    assert!(high > 0.7, "hp passband {high}");
+                    assert!(low < 0.1, "hp stopband {low}");
+                }
+                _ => {}
+            }
+        }
+    }
+
+    /// A notch must DIP at cutoff and pass both sides. Summing lp+hp is the textbook
+    /// identity, and this is the check that says whether our particular formulation
+    /// actually realises it -- a "notch" that measures the same as the lowpass is just a
+    /// lowpass with a different label.
+    #[test]
+    fn notch_dips_at_cutoff_and_passes_both_sides() {
+        let sr = 48_000.0;
+        let fc = 1_000.0;
+        let m = |hz: f32| {
+            let mut s = Svf::new();
+            s.set(fc, 0.0, sr);
+            mag(hz, sr, |x| {
+                let (lp, _bp, hp) = s.process_all(x);
+                lp + hp
+            })
+        };
+        let (low, at, high) = (m(fc / 8.0), m(fc), m(fc * 8.0));
+        assert!(low > 0.7, "notch should pass well below cutoff, got {low}");
+        assert!(high > 0.7, "notch should pass well above cutoff, got {high}");
+        assert!(at < 0.5, "notch should dip AT cutoff, got {at} (low {low} high {high})");
     }
 }
