@@ -1,7 +1,7 @@
 // AudioWorkletProcessor hosting the WASM engine. Runs on the audio thread:
 // no allocation, no async, no per-block object creation.
 class SubtractiveProcessor extends AudioWorkletProcessor {
-  constructor() {
+  constructor(options) {
     super();
     this.engine = 0;
     this.wasm = null;
@@ -12,17 +12,34 @@ class SubtractiveProcessor extends AudioWorkletProcessor {
     this.cursor = 0;
     this.statFrames = 0;
     this.port.onmessage = (e) => this.onMessage(e.data);
+
+    // Initialise from processorOptions when they are supplied, NOT from a port message.
+    // An OfflineAudioContext renders to completion without necessarily servicing the
+    // message port, so a port-delivered init (and any port-delivered notes) can arrive
+    // after rendering has already finished — producing silence, non-deterministically,
+    // depending only on how fast the machine is. processorOptions are delivered with
+    // the node itself, before the first block.
+    const opts = options?.processorOptions;
+    if (opts?.bytes) {
+      this.boot(opts.bytes);
+      if (opts.events) this.onMessage({ type: "schedule", events: opts.events });
+    }
+  }
+
+  boot(bytes) {
+    // Compile INSIDE the worklet from bytes. Never postMessage a WebAssembly.Module:
+    // Safari and headless Chromium silently drop the clone into `messageerror`, which
+    // presents as an engine that never becomes ready.
+    const mod = new WebAssembly.Module(bytes);
+    this.wasm = new WebAssembly.Instance(mod, {}).exports;
+    this.engine = this.wasm.engine_new(sampleRate);
+    this.port.postMessage({ type: "ready" });
   }
 
   onMessage(msg) {
     if (msg.type === "init") {
-      // Compile INSIDE the worklet from bytes. Never postMessage a WebAssembly.Module:
-      // Safari and headless Chromium silently drop the clone into `messageerror`, which
-      // presents as an engine that never becomes ready.
-      const mod = new WebAssembly.Module(msg.bytes);
-      this.wasm = new WebAssembly.Instance(mod, {}).exports;
-      this.engine = this.wasm.engine_new(sampleRate);
-      this.port.postMessage({ type: "ready" });
+      if (!this.wasm) this.boot(msg.bytes);
+      else this.port.postMessage({ type: "ready" });
       return;
     }
     if (!this.wasm) return;

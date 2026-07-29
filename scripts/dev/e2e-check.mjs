@@ -33,8 +33,8 @@ try {
       wasmUrl: "../../packages/core/wasm/subtractive_dsp.wasm",
       workletUrl: "../../packages/core/worklet/processor.js",
       context: ctx,
+      initialEvents: [{ type: "noteOn", note: 60, vel: 0.9, at: 0 }],
     });
-    engine.noteOn(60, 0.9);
     const buf = await ctx.startRendering();
     const ch = buf.getChannelData(0);
     let peak = 0, sum = 0, nonFinite = 0;
@@ -60,9 +60,9 @@ try {
       wasmUrl: "../../packages/core/wasm/subtractive_dsp.wasm",
       workletUrl: "../../packages/core/worklet/processor.js",
       context: ctx,
+      initialEvents: [48, 55, 60, 64, 67, 72].map(
+        (note) => ({ type: "noteOn", note, vel: 0.8, at: 0 })),
     });
-    for (const n of [48, 55, 60, 64, 67, 72]) engine.noteOn(n, 0.8);
-    setTimeout(() => engine.allOff(), 0);
     const buf = await ctx.startRendering();
     const ch = buf.getChannelData(0);
     let peak = 0;

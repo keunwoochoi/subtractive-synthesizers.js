@@ -18,23 +18,30 @@ export const SHAPE = { saw: 0, pulse: 1, triangle: 2 };
  * Create the engine. Lazy: the AudioContext is constructed here, so call it from a
  * user gesture (browsers refuse to start audio otherwise).
  */
-export async function createEngine({ wasmUrl, workletUrl, context } = {}) {
+export async function createEngine({ wasmUrl, workletUrl, context, initialEvents } = {}) {
   const ctx = context ?? new (globalThis.AudioContext ?? globalThis.webkitAudioContext)();
   const bytes = await (await fetch(wasmUrl)).arrayBuffer();
   await ctx.audioWorklet.addModule(workletUrl);
 
-  const node = new AudioWorkletNode(ctx, "subtractive", { outputChannelCount: [2] });
+  // Everything the engine needs to make sound is handed over WITH the node. Port
+  // messages remain the live-control path, but an offline render must never depend on
+  // one being delivered — see the worklet constructor.
+  const node = new AudioWorkletNode(ctx, "subtractive", {
+    outputChannelCount: [2],
+    processorOptions: { bytes: bytes.slice(0), events: initialEvents },
+  });
   node.connect(ctx.destination);
 
-  await new Promise((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error("worklet never signalled ready")), 5000);
-    node.port.onmessage = (e) => {
-      if (e.data?.type === "ready") { clearTimeout(t); resolve(); }
-    };
-    // Transfer a copy: the original ArrayBuffer stays usable for a second engine.
-    const copy = bytes.slice(0);
-    node.port.postMessage({ type: "init", bytes: copy }, [copy]);
-  });
+  // A realtime context services the port, so waiting for the ack is meaningful there.
+  // An offline context may not, and must not be blocked on one — it is already armed.
+  if (typeof ctx.startRendering !== "function") {
+    await new Promise((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error("worklet never signalled ready")), 5000);
+      node.port.onmessage = (e) => {
+        if (e.data?.type === "ready") { clearTimeout(t); resolve(); }
+      };
+    });
+  }
 
   const post = (m) => node.port.postMessage(m);
   const api = { voices: 0 };
