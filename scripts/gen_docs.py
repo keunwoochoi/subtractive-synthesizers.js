@@ -102,7 +102,8 @@ def gen_harness_stats() -> str:
     a = _count_ok([sys.executable, "scripts/audit/test_harness_audit.py"])
     v = _count_ok([sys.executable, "scripts/verify/test_verify_spec.py"])
     fixtures = len([p for p in (ROOT / "scripts/audit/fixtures").iterdir() if p.is_dir()])
-    return (f"| harness audit assertions | {checks} |\n"
+    return ("| | |\n|---|---|\n"
+            f"| harness audit assertions | {checks} |\n"
             f"| fail-correctly tests | {a + v} |\n"
             f"| deliberately-broken fixtures | {fixtures} |\n")
 
@@ -140,7 +141,34 @@ def gen_bundle_total() -> str:
     return "unknown"
 
 
+def gen_bench() -> str:
+    """Audio-thread cost. Measured on whatever machine regenerates this — which is why
+    the row says so rather than implying a universal figure."""
+    out = subprocess.run(["node", "scripts/verify/dsp_bench.mjs"],
+                         capture_output=True, text=True, cwd=ROOT)
+    voices = pct = rt = None
+    for ln in out.stdout.splitlines():
+        if "active voices" in ln:
+            voices = ln.split()[2]
+        m = re.search(r"bench OK — ([\d.]+)% .*?\(([\d.]+)x real time\)", ln)
+        if m:
+            pct, rt = m.group(1), m.group(2)
+    if pct is None:
+        return "_(bench did not complete)_\n"
+    return ("| | |\n|---|---|\n"
+            f"| voices in the reference arrangement | {voices} (pad + bass + lead, chorus on) |\n"
+            f"| audio-thread budget used | **{pct} %** of the 2.667 ms / 128-frame budget |\n"
+            f"| real-time factor | {rt}x |\n")
+
+
+# Blocks whose value legitimately differs by machine. They are still GENERATED — never
+# typed — but --check does not diff them, because "this laptop is faster than that CI
+# runner" is not a documentation defect. Everything not listed here must be identical
+# everywhere, and a difference is a real failure.
+VOLATILE = {"bench"}
+
 GENERATORS = {
+    "bench": gen_bench,
     "bundle": gen_bundle,
     "bundle-total": gen_bundle_total,
     "alias-table": gen_alias_table,
@@ -151,6 +179,15 @@ GENERATORS = {
 
 TARGETS = ["README.md", "apps/playground/showcase.html",
            "agentic-docs/report/draft.md"]
+
+
+def _mask(text: str) -> str:
+    """Blank the body of every volatile block, so the diff only sees stable content."""
+    def sub(m: re.Match) -> str:
+        if m.group("name") in VOLATILE:
+            return m.group(1) + m.group(4)
+        return m.group(0)
+    return BLOCK.sub(sub, text)
 
 
 def render(path: Path) -> str:
@@ -181,7 +218,11 @@ def main() -> int:
             continue
         current = p.read_text(encoding="utf-8")
         fresh = render(p)
-        if current == fresh:
+        if args.check:
+            # Compare with volatile blocks masked out on both sides.
+            if _mask(current) == _mask(fresh):
+                continue
+        elif current == fresh:
             continue
         if args.check:
             stale.append(rel)

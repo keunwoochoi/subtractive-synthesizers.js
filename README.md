@@ -30,6 +30,21 @@ and that difference decides how the whole project verifies its work.
 Budget is 60 KB gzipped for the whole library — currently **45%**.
 <!-- /generated:bundle -->
 
+## Cost
+
+<!-- generated:bench -->
+| | |
+|---|---|
+| voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
+| audio-thread budget used | **4.0 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 25.0x |
+<!-- /generated:bench -->
+
+Measured on the machine that regenerated this table, with the voice pool saturated and
+the chorus on — the worst case this build can produce. **Not a claim about any other
+device, and explicitly not a mobile figure**: estimated mobile numbers are never
+presented as budget rows here.
+
 ## How it verifies itself
 
 A sawtooth through a resonant lowpass is not an imitation of anything, so there is no
@@ -99,6 +114,8 @@ which is the only thing that lets the work finish.
 ## Harness
 
 <!-- generated:harness-stats -->
+| | |
+|---|---|
 | harness audit assertions | 24 |
 | fail-correctly tests | 17 |
 | deliberately-broken fixtures | 7 |

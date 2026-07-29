@@ -44,6 +44,10 @@ echo "== engine checks (stability, headroom, effects) =="
 node scripts/verify/check_engine.mjs | tail -3
 
 echo
+echo "== dsp-bench (audio-thread budget) =="
+node scripts/verify/dsp_bench.mjs | grep -E "active voices|bench|BENCH"
+
+echo
 echo "== patch intents (PRINCIPLES #2) =="
 python3 scripts/verify/check_intents.py
 
