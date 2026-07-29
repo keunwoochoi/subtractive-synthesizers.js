@@ -10,6 +10,7 @@
     "audit:bundle": "scripts/audit/bundle-size-audit.sh",
     "test:harness": "python3 scripts/audit/test_harness_audit.py",
     "verify:spec": "python3 scripts/verify/verify_spec.py",
-    "test:verify": "python3 scripts/verify/test_verify_spec.py"
+    "test:verify": "python3 scripts/verify/test_verify_spec.py",
+    "check:intents": "python3 scripts/verify/check_intents.py"
   }
 }

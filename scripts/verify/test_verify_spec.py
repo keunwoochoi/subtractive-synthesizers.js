@@ -12,6 +12,7 @@ gate we rely on is dead.
 from __future__ import annotations
 
 import ast
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -93,6 +94,42 @@ class TestEvaluatorIntegrity(unittest.TestCase):
     def test_shipped_grids_are_measurable(self):
         V.assert_grid_is_measurable([(f, V.VISIBLE_SR) for f in V.VISIBLE_NOTES], "visible")
         V.assert_grid_is_measurable(V.hidden_grid(), "hidden")
+
+
+class TestIntentCheckFailsCorrectly(unittest.TestCase):
+    """PRINCIPLES #2 is a gate, so the gate gets the same fail-correctly proof."""
+
+    FIXTURES = Path(__file__).resolve().parent / "fixtures"
+    SCRIPT = Path(__file__).resolve().parent / "check_intents.py"
+
+    MUST_REJECT = {
+        "missing-section": "one committed target",
+        "too-few-targets": "measurable targets",
+        "unsourced-target": "phrase it derives from",
+        "impl-without-intent": "NO intent.md",
+    }
+
+    def _run(self, fixture):
+        return subprocess.run(
+            [sys.executable, str(self.SCRIPT), "--root", str(self.FIXTURES / fixture)],
+            capture_output=True, text=True)
+
+    def test_wellformed_intent_passes(self):
+        r = self._run("good")
+        self.assertEqual(r.returncode, 0, r.stdout)
+
+    def test_malformed_intents_are_rejected_for_the_right_reason(self):
+        for fixture, expect in self.MUST_REJECT.items():
+            with self.subTest(fixture=fixture):
+                r = self._run(fixture)
+                self.assertEqual(r.returncode, 1, f"{fixture} was accepted")
+                self.assertIn(expect, r.stdout,
+                              f"{fixture} was rejected, but not for the reason we rely on")
+
+    def test_shipped_intents_are_wellformed(self):
+        r = subprocess.run([sys.executable, str(self.SCRIPT)],
+                           capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stdout)
 
 
 if __name__ == "__main__":

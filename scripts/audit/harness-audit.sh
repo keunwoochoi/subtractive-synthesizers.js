@@ -21,5 +21,9 @@ echo "== proving verify-spec rejects cheats =="
 python3 scripts/verify/test_verify_spec.py 2>&1 | tail -3
 
 echo
+echo "== patch intents (PRINCIPLES #2) =="
+python3 scripts/verify/check_intents.py
+
+echo
 echo "== auditing the repo =="
 python3 scripts/audit/harness_audit.py
