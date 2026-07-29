@@ -1,0 +1,17 @@
+name: Work item
+description: Anything that is not a patch intent.
+body:
+  - type: textarea
+    id: motivation
+    attributes: { label: Motivation and evidence }
+    validations: { required: true }
+  - type: textarea
+    id: outcome
+    attributes: { label: Desired outcome and acceptance criteria }
+    validations: { required: true }
+  - type: textarea
+    id: validation
+    attributes:
+      label: How it will be validated
+      description: "Which gate, measured at which SHA. 'Looks right' is not validation."
+    validations: { required: true }

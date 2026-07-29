@@ -1,0 +1,34 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  harness:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Harness audit (proves it can fail, then audits the repo)
+        run: scripts/audit/harness-audit.sh
+      - name: Bundle ceiling
+        run: scripts/audit/bundle-size-audit.sh
+
+  human-block:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      # AGENTS.md promises CI fails when the owner's HUMAN block is missing.
+      # An unenforced promise is the thing this repo exists to avoid.
+      - name: Require a non-empty HUMAN block
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          if ! grep -q '^## HUMAN:' <<<"$BODY"; then
+            echo "::error::PR body is missing the '## HUMAN:' section."; exit 1
+          fi
+          CONTENT=$(sed -n '/^## HUMAN:/,$p' <<<"$BODY" | tail -n +2 | sed '/^<!--/,/-->/d' | tr -d '[:space:]')
+          if [ -z "$CONTENT" ]; then
+            echo "::error::The HUMAN block is empty. The owner must write it — agents must not."
+            exit 1
+          fi

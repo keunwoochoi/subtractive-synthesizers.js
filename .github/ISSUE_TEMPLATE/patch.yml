@@ -1,0 +1,30 @@
+name: Patch — intent statement
+description: Propose a new patch. The intent is written BEFORE any tuning.
+title: "patch(<name>): "
+body:
+  - type: markdown
+    attributes:
+      value: "PRINCIPLES #2: write the target down before you tune it. This issue IS that target."
+  - type: input
+    id: for
+    attributes: { label: What is it for? }
+    validations: { required: true }
+  - type: textarea
+    id: prose
+    attributes:
+      label: In words
+      description: How it should sound. Prose, not parameters.
+    validations: { required: true }
+  - type: input
+    id: committed
+    attributes:
+      label: The one committed target (not an average)
+      description: "If forced to choose between two directions, which wins? A patch that offends nobody has failed."
+    validations: { required: true }
+  - type: textarea
+    id: targets
+    attributes:
+      label: Measurable targets
+      description: "3–5 rows. Each names the phrase above it comes from."
+      value: "| # | Target | From which phrase |\n|---|---|---|\n| 1 | | |"
+    validations: { required: true }
