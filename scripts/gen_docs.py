@@ -195,8 +195,7 @@ GENERATORS = {
     "harness-stats": gen_harness_stats,
 }
 
-TARGETS = ["README.md", "apps/playground/showcase.html",
-           "agentic-docs/report/draft.md"]
+TARGETS = ["README.md", "agentic-docs/report/draft.md"]
 
 
 def _mask(text: str) -> str:

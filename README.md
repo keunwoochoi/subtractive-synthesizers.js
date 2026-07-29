@@ -52,8 +52,8 @@ Budget is 60 KB gzipped for the whole library — currently **52%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **8.3 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 12.1x |
+| audio-thread budget used | **9.7 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 10.3x |
 <!-- /generated:bench -->
 
 Measured on the machine that regenerated this table, with the voice pool saturated and

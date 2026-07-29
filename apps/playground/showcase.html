@@ -49,8 +49,6 @@
 
 <header>
   <h1>subtractive<span>-synthesizers</span>.js — showcase</h1>
-  <div class="sub">Every note below is <b>computed on the fly</b> from oscillators and a
-    filter. No samples, no recordings — the whole engine is <b id="size"><!-- generated:bundle-total -->31.8 KB<!-- /generated:bundle-total --></b> gzipped.</div>
 </header>
 
 <main>
@@ -240,8 +238,4 @@ $("play").onclick = async () => {
   }
 };
 
-// The size above is generated from scripts/audit/bundle-size-audit.sh, which owns the
-// number. Deliberately NOT measured here with CompressionStream: the browser's zlib
-// gives a different figure again (26.2 KB against the audit's 25.6), and two published
-// numbers that disagree are worse than one number with a single owner.
 </script>

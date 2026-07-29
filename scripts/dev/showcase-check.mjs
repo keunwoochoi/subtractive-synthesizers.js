@@ -65,12 +65,10 @@ try {
 
   const state = await p.evaluate(() => ({
     sr: document.getElementById("sr").textContent,
-    size: document.getElementById("size").textContent,
     label: document.getElementById("play").textContent,
     lit: document.querySelectorAll(".st.now").length,
   }));
   if (!state.label.includes("Stop")) fail("transport did not enter playing state");
-  if (!/KB/.test(state.size)) fail(`size was not measured: ${state.size}`);
 
   // Switching patch mid-play must not throw or silence the engine -- AND the UI must
   // follow. The previous version clicked cards and asserted nothing about the result,
@@ -105,5 +103,5 @@ try {
 
   if (errs.length) fail("page errors: " + errs.slice(0, 3).join(" | "));
   console.log("showcase:", JSON.stringify({ ...state, peakVoices }));
-  console.log(`SHOWCASE OK — ${expected} patches, transport runs, size measured in-page, selection + step grid follow every click`);
+  console.log(`SHOWCASE OK — ${expected} patches, transport runs, selection + step grid follow every click`);
 } finally { await b.close(); server.kill(); }
