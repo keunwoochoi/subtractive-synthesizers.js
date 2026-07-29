@@ -11,7 +11,7 @@ export const PRESETS = {
       cutoffHz: 420, resonance: 0.28, drive: 1.6, envAmount: 2200, keyTrack: 0.25,
       ampAttack: 0.004, ampDecay: 0.30, ampSustain: 0.60, ampRelease: 0.14,
       fltAttack: 0.001, fltDecay: 0.22, fltSustain: 0.12, fltRelease: 0.15,
-      velToCutoff: 1800, gain: 0.38 },
+      velToCutoff: 1800, gain: 0.38, chorusMix: 0 },
   },
   "acid": {
     label: "Acid", blurb: "Squelch. The filter is the instrument.",
@@ -19,15 +19,16 @@ export const PRESETS = {
       cutoffHz: 170, resonance: 0.88, drive: 2.6, envAmount: 3400, keyTrack: 0.15,
       ampAttack: 0.002, ampDecay: 0.5, ampSustain: 0.85, ampRelease: 0.07,
       fltAttack: 0.001, fltDecay: 0.17, fltSustain: 0.0, fltRelease: 0.10,
-      velToCutoff: 2600, gain: 0.34 },
+      velToCutoff: 2600, gain: 0.34, chorusMix: 0 },
   },
   "poly-pad": {
-    label: "Poly pad", blurb: "Slow, wide, drifting. Wants a chorus it does not have yet.",
+    label: "Poly pad", blurb: "Slow and wide, through a three-phase ensemble.",
     params: { shape: 0, detuneCents: 19, subLevel: 0.28, noiseLevel: 0.03, pulseWidth: 0.5,
       cutoffHz: 620, resonance: 0.18, drive: 1.1, envAmount: 1500, keyTrack: 0.45,
       ampAttack: 0.55, ampDecay: 1.2, ampSustain: 0.80, ampRelease: 1.30,
       fltAttack: 0.70, fltDecay: 1.4, fltSustain: 0.55, fltRelease: 1.20,
-      velToCutoff: 900, gain: 0.30 },
+      velToCutoff: 900, gain: 0.30,
+      chorusRate: 0.42, chorusDepth: 4.2, chorusMix: 0.85 },
   },
   "lead": {
     label: "Lead", blurb: "Hollow pulse, cuts through without volume.",
@@ -35,7 +36,7 @@ export const PRESETS = {
       cutoffHz: 1500, resonance: 0.42, drive: 1.5, envAmount: 2400, keyTrack: 0.5,
       ampAttack: 0.015, ampDecay: 0.35, ampSustain: 0.82, ampRelease: 0.22,
       fltAttack: 0.005, fltDecay: 0.30, fltSustain: 0.45, fltRelease: 0.22,
-      velToCutoff: 2000, gain: 0.30 },
+      velToCutoff: 2000, gain: 0.30, chorusRate: 0.9, chorusDepth: 2.0, chorusMix: 0.30 },
   },
   "brass-stab": {
     label: "Brass stab", blurb: "Filter env does the work. Hit it hard.",
@@ -43,7 +44,7 @@ export const PRESETS = {
       cutoffHz: 480, resonance: 0.48, drive: 1.8, envAmount: 4200, keyTrack: 0.35,
       ampAttack: 0.012, ampDecay: 0.22, ampSustain: 0.68, ampRelease: 0.26,
       fltAttack: 0.018, fltDecay: 0.26, fltSustain: 0.22, fltRelease: 0.24,
-      velToCutoff: 2800, gain: 0.30 },
+      velToCutoff: 2800, gain: 0.30, chorusRate: 0.7, chorusDepth: 2.4, chorusMix: 0.35 },
   },
   "pluck": {
     label: "Pluck", blurb: "Short, bright, no sustain. The default that just works.",
@@ -51,7 +52,7 @@ export const PRESETS = {
       cutoffHz: 900, resonance: 0.55, drive: 1.3, envAmount: 3600, keyTrack: 0.45,
       ampAttack: 0.002, ampDecay: 0.26, ampSustain: 0.0, ampRelease: 0.12,
       fltAttack: 0.001, fltDecay: 0.13, fltSustain: 0.0, fltRelease: 0.10,
-      velToCutoff: 2200, gain: 0.34 },
+      velToCutoff: 2200, gain: 0.34, chorusMix: 0 },
   },
 };
 

@@ -9,9 +9,11 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
 pub mod filter;
+pub mod fx;
 pub mod osc;
 pub mod voice;
 
+use fx::Chorus;
 use osc::Shape;
 use voice::{soft_clip, Patch, Voice};
 
@@ -43,6 +45,10 @@ pub struct Engine {
     /// than the oscillator.
     probe: osc::Osc,
     probe_hz: f32,
+    chorus: Chorus,
+    chorus_rate: f32,
+    chorus_depth: f32,
+    chorus_mix: f32,
 }
 
 impl Engine {
@@ -56,6 +62,10 @@ impl Engine {
             out: [0.0; MAX_BLOCK],
             probe: osc::Osc::new(),
             probe_hz: -1.0,
+            chorus: Chorus::new(),
+            chorus_rate: 0.6,
+            chorus_depth: 3.0,
+            chorus_mix: 0.0,
         }
     }
 
@@ -98,6 +108,10 @@ impl Engine {
         }
     }
 
+    fn sync_chorus(&mut self) {
+        self.chorus.set(self.chorus_rate, self.chorus_depth, self.chorus_mix, self.sr);
+    }
+
     pub fn active_voices(&self) -> u32 {
         self.voices.iter().filter(|v| v.active).count() as u32
     }
@@ -113,6 +127,11 @@ impl Engine {
             }
             for s in self.out[..n].iter_mut() {
                 *s += v.tick(&self.patch, self.sr);
+            }
+        }
+        if self.chorus.is_active() {
+            for s in self.out[..n].iter_mut() {
+                *s = self.chorus.process(*s);
             }
         }
         for s in self.out[..n].iter_mut() {
@@ -227,6 +246,18 @@ pub unsafe extern "C" fn set_param(p: *mut Engine, id: u32, v: f32) {
         17 => e.patch.flt.3 = v,
         18 => e.patch.vel_to_cutoff = v,
         19 => e.gain = v,
+        20 => { e.chorus_rate = v; e.sync_chorus(); }
+        21 => { e.chorus_depth = v; e.sync_chorus(); }
+        22 => {
+            let was = e.chorus.is_active();
+            e.chorus_mix = v;
+            e.sync_chorus();
+            // Clear the line when switching the effect on, or the first block plays
+            // back whatever was sitting in the buffer from the previous patch.
+            if !was && e.chorus.is_active() {
+                e.chorus.reset();
+            }
+        }
         _ => {}
     }
 }

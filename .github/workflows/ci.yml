@@ -28,6 +28,9 @@ jobs:
       - name: Grade the oscillator against its analytic prototype
         run: python3 scripts/verify/verify_spec.py
 
+      - name: Engine checks on the shipped WASM
+        run: node scripts/verify/check_engine.mjs
+
       - name: Harness audit (identity, fixtures, intents, generated docs, referents)
         run: scripts/audit/harness-audit.sh
 

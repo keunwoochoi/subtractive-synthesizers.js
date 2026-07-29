@@ -22,12 +22,12 @@ and that difference decides how the whole project verifies its work.
 <!-- generated:bundle -->
 | artifact | raw | gzipped |
 |---|---:|---:|
-| `packages/core/wasm/subtractive_dsp.wasm` | 59,906 B | 24,203 B |
-| `packages/core/src/index.js` | 2,440 B | 1,222 B |
+| `packages/core/wasm/subtractive_dsp.wasm` | 62,887 B | 25,000 B |
+| `packages/core/src/index.js` | 2,490 B | 1,249 B |
 | `packages/core/worklet/processor.js` | 3,837 B | 1,569 B |
-| **total** | | **26,994 B (26.4 KB)** |
+| **total** | | **27,818 B (27.2 KB)** |
 
-Budget is 60 KB gzipped for the whole library — currently **43%**.
+Budget is 60 KB gzipped for the whole library — currently **45%**.
 <!-- /generated:bundle -->
 
 ## How it verifies itself

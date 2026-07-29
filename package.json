@@ -16,7 +16,8 @@
     "docs": "python3 scripts/gen_docs.py",
     "docs:check": "python3 scripts/gen_docs.py --check",
     "e2e": "node scripts/dev/e2e-check.mjs",
-    "dev": "scripts/dev/serve.sh"
+    "dev": "scripts/dev/serve.sh",
+    "verify:engine": "node scripts/verify/check_engine.mjs"
   },
   "devDependencies": {
     "playwright": "^1.62.0"

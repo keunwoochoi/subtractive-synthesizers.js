@@ -7,6 +7,7 @@ export const PARAM = {
   ampAttack: 10, ampDecay: 11, ampSustain: 12, ampRelease: 13,
   fltAttack: 14, fltDecay: 15, fltSustain: 16, fltRelease: 17,
   velToCutoff: 18, gain: 19,
+  chorusRate: 20, chorusDepth: 21, chorusMix: 22,
 };
 
 export const SHAPE = { saw: 0, pulse: 1, triangle: 2 };

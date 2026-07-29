@@ -40,6 +40,10 @@ echo "== proving verify-spec rejects cheats =="
 run_tests scripts/verify/test_verify_spec.py
 
 echo
+echo "== engine checks (stability, headroom, effects) =="
+node scripts/verify/check_engine.mjs | tail -3
+
+echo
 echo "== patch intents (PRINCIPLES #2) =="
 python3 scripts/verify/check_intents.py
 
