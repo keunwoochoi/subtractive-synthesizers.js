@@ -23,7 +23,10 @@ BODY=$(tail -n +2 "$MSG_FILE" | grep -v '^#' || true)
 }
 
 missing=()
-grep -qiE 'abandon|rejected|tried|did not work|discarded|backed out' <<<"$BODY" \
+# 'reverted' is how an abandoned route is most often described once it has already
+# been written; the first vocabulary list missed it and blocked a commit whose
+# entire middle section was an abandoned approach.
+grep -qiE 'abandon|rejected|revert|tried|did not work|discarded|backed out' <<<"$BODY" \
   || missing+=("what was tried and abandoned (the row that exists nowhere else)")
 grep -qiE 'cost|bundle|cpu|memory|zero runtime|no runtime' <<<"$BODY" \
   || missing+=("the cost (CPU / memory / bundle)")

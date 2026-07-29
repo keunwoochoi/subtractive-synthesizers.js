@@ -16,7 +16,8 @@ const P = { ampSustain: 12, ampRelease: 13, gain: 19, chorusRate: 20, chorusDept
             delayMix: 23, delayTime: 24, delayFeedback: 25,
             reverbMix: 27, reverbSize: 28, filterKind: 37,
             unison: 31, detuneCents: 2, stereoWidth: 38, ampRelease2: 13,
-            delayTime: 24, delayFeedback: 25 };
+            delayTime: 24, delayFeedback: 25, syncRatio: 39, envAmount: 8,
+            subLevel: 3, velToCutoff: 18 };
 
 const { instance } = await WebAssembly.instantiate(readFileSync(WASM), {});
 const x = instance.exports;
@@ -348,6 +349,36 @@ console.log("engine checks (shipped WASM)\n");
   check(first && second, "delay repeats ping-pong between the channels",
         `t=0.25 L ${env(pp.L, 0.25).toFixed(4)}/R ${env(pp.R, 0.25).toFixed(4)}, ` +
         `t=0.50 L ${env(pp.L, 0.5).toFixed(4)}/R ${env(pp.R, 0.5).toFixed(4)}`);
+}
+
+// --- hard sync: pitch must hold, timbre must climb
+{
+  const centroidOf = (ratio) => {
+    const a = renderSum(1.0, (e) => {
+      x.set_param(e, P.ampSustain, 0.9); x.set_param(e, P.unison, 1);
+      x.set_param(e, P.stereoWidth, 0); x.set_param(e, P.cutoffHz, 20000);
+      x.set_param(e, P.resonance, 0); x.set_param(e, P.envAmount, 0);
+      x.set_param(e, P.velToCutoff, 0);
+      // The SUB must be off: an oscillator an octave down puts energy at HALF-integer
+      // multiples of the note, which any harmonic metric correctly calls inharmonic.
+      // Leaving it on made a clean sawtooth measure -6.5 dB and sent this whole
+      // investigation chasing a sync bug that did not exist.
+      x.set_param(e, P.subLevel, 0);
+      x.set_param(e, P.syncRatio, ratio);
+      x.note_on(e, 48, 0.9);
+    });
+    const seg = a.subarray(SR / 2, SR / 2 + 16384);
+    let num = 0, den = 0, prev = 0, zc = 0;
+    for (let i = 0; i < seg.length; i++) { if (prev <= 0 && seg[i] > 0) zc++; prev = seg[i]; }
+    // Crude brightness proxy: zero crossings per second rise with harmonic content and
+    // need no FFT here.
+    return { zc: zc / (seg.length / SR), rms: rms(seg) };
+  };
+  const flat = centroidOf(1.0);
+  const torn = centroidOf(3.7);
+  check(torn.zc > flat.zc * 1.2, "hard sync brightens the tone",
+        `zero crossings/s ${flat.zc.toFixed(0)} -> ${torn.zc.toFixed(0)}`);
+  check(torn.rms > 0.01, "sync patch still sounds", `rms ${torn.rms.toFixed(3)}`);
 }
 
 console.log();

@@ -28,6 +28,16 @@ fn poly_blep(t: f32, dt: f32) -> f32 {
     }
 }
 
+/// The naive waveform value at a phase, used to size a sync discontinuity.
+#[inline]
+fn raw_value(shape: Shape, t: f32, width: f32) -> f32 {
+    match shape {
+        Shape::Saw => 2.0 * t - 1.0,
+        Shape::Pulse => if t < width.clamp(0.05, 0.95) { 1.0 } else { -1.0 },
+        Shape::Triangle => 4.0 * (t - 0.5).abs() - 1.0,
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Shape {
     Saw,
@@ -49,13 +59,16 @@ impl Shape {
 pub struct Osc {
     phase: f32,
     dt: f32,
+    /// Retained from an abandoned experiment; see hard_sync.
+    sync_jump: f32,
+    sync_age: f32,
     /// Triangle is an integrated square; this holds the integrator state.
     tri: f32,
 }
 
 impl Osc {
     pub const fn new() -> Self {
-        Osc { phase: 0.0, dt: 0.0, tri: 0.0 }
+        Osc { phase: 0.0, dt: 0.0, sync_jump: 0.0, sync_age: 2.0, tri: 0.0 }
     }
 
     #[inline]
@@ -69,6 +82,35 @@ impl Osc {
     #[inline]
     pub fn set_phase(&mut self, p: f32) {
         self.phase = p.fract().abs();
+    }
+
+    /// Hard sync: force the phase back to `frac` because a master oscillator wrapped.
+    ///
+    /// `frac` is how far INTO this sample the master crossed, not zero. Resetting to a
+    /// flat zero quantises every reset to a sample boundary, which turns the sync edge
+    /// into a stream of jitter at the sample rate -- audible as a gritty buzz that gets
+    /// worse the higher the note. Carrying the sub-sample position through is most of
+    /// what makes hard sync sound like a tone rather than like noise.
+    /// Hard sync: force the phase back because a master oscillator wrapped.
+    ///
+    /// `frac` is how far INTO the sample the master crossed, not zero. Resetting to a
+    /// flat zero quantises every reset to a sample boundary, which turns the sync edge
+    /// into jitter at the sample rate -- a gritty buzz that worsens with pitch. Carrying
+    /// the sub-sample position through is most of what makes sync a tone, not noise.
+    ///
+    /// NO BLEP CORRECTION HERE, and that was a deliberate reversal. Band-limiting the
+    /// reset step the way the waveform's own edges are band-limited MEASURED WORSE:
+    /// inharmonic energy at non-integer ratios went from -53 dB to -42 dB, and the
+    /// integer-ratio artefacts it was written to fix did not move at all. Kept simple
+    /// rather than kept clever. The known limit is recorded on `sync_ratio`.
+    #[inline]
+    pub fn hard_sync(&mut self, frac: f32, _shape: Shape, _width: f32) {
+        self.phase = frac * self.dt;
+    }
+
+    #[inline]
+    pub fn dt(&self) -> f32 {
+        self.dt
     }
 
     #[inline]

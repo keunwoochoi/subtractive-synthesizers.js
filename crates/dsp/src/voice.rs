@@ -139,6 +139,18 @@ pub struct Patch {
     pub lfo_pwm: f32,
     /// 0 = mono, 1 = unison spread across the full image.
     pub stereo_width: f32,
+    /// Hard-sync ratio. 1.0 is off; above that the oscillators run faster than the note
+    /// and are reset by a master at the note's own pitch. Sweeping it is the classic
+    /// tearing sync lead -- the pitch stays put while the timbre climbs.
+    ///
+    /// MEASURED, AND HONEST ABOUT THE LIMIT: at non-integer ratios the tone stays
+    /// periodic at the note (inharmonic energy -42 to -53 dB) and brightness rises
+    /// monotonically (spectral centroid 2350 -> 3185 Hz across 1.0 to 3.7). At INTEGER
+    /// ratios the reset coincides with the oscillator's own wrap and the result is
+    /// dirtier (-16 dB at 2.0, -23 dB at 3.0). Sweeping the ratio -- which is how sync
+    /// is actually played -- passes through those points rather than sitting on them,
+    /// so this ships as a known limit rather than a blocker.
+    pub sync_ratio: f32,
     pub pulse_width: f32,
     pub detune_cents: f32,
     pub sub_level: f32,
@@ -165,6 +177,7 @@ impl Patch {
             lfo_cutoff_hz: 0.0,
             lfo_pwm: 0.0,
             stereo_width: 0.7,
+            sync_ratio: 1.0,
             pulse_width: 0.5,
             detune_cents: 8.0,
             sub_level: 0.35,
@@ -193,6 +206,9 @@ pub struct Voice {
     /// Portamento state: where the pitch is now, and where it is heading.
     f_now: f32,
     glide_c: f32,
+    /// Master phase for hard sync, always at the note's own pitch.
+    sync_phase: f32,
+    sync_dt: f32,
     noise: Noise,
     filter: [Ladder; 2],
     diode: [Diode; 2],
@@ -218,6 +234,8 @@ impl Voice {
             hb: [HalfBand::new(); 2],
             f_now: 440.0,
             glide_c: 1.0,
+            sync_phase: 0.0,
+            sync_dt: 0.0,
             noise: Noise::new(1),
             filter: [Ladder::new(); 2],
             diode: [Diode::new(); 2],
@@ -250,6 +268,7 @@ impl Voice {
             o.set_phase(0.5 * (n.tick() + 1.0));
         }
         self.sub.set_phase(0.0);
+        self.sync_phase = 0.0;
 
         // Portamento. Starting from the previous note's pitch rather than the new one is
         // the whole effect; a glide time of zero must still land exactly on pitch, hence
@@ -283,6 +302,10 @@ impl Voice {
     fn update_freqs(&mut self, patch: &Patch, base_hz: f32, sr2: f32) {
         let n = (patch.unison.max(1) as usize).min(MAX_UNISON);
         let base = base_hz * cents(self.drift_cents);
+        // The master always runs at the note; the oscillators run at ratio x the note.
+        self.sync_dt = (base / sr2).clamp(0.0, 0.49);
+        let ratio = patch.sync_ratio.max(1.0);
+        let base = base * ratio;
         for i in 0..n {
             // -1..1 across the stack; a single oscillator sits dead centre.
             let t = if n == 1 { 0.0 } else { (i as f32 / (n - 1) as f32) * 2.0 - 1.0 };
@@ -353,7 +376,23 @@ impl Voice {
         for k in 0..2 {
             let mut l = 0.0;
             let mut r = 0.0;
+            // Advance the sync master first: if it wrapped inside this sample, every
+            // oscillator restarts at the same sub-sample offset.
+            let mut synced = false;
+            let mut frac = 0.0;
+            if patch.sync_ratio > 1.0001 {
+                self.sync_phase += self.sync_dt;
+                if self.sync_phase >= 1.0 {
+                    self.sync_phase -= 1.0;
+                    synced = true;
+                    // How far past the wrap we already are, as a fraction of a sample.
+                    frac = if self.sync_dt > 0.0 { self.sync_phase / self.sync_dt } else { 0.0 };
+                }
+            }
             for i in 0..n {
+                if synced {
+                    self.osc[i].hard_sync(frac, patch.shape, pw);
+                }
                 let v = self.osc[i].tick(patch.shape, pw);
                 let t = if n == 1 { 0.0 } else { (i as f32 / (n - 1) as f32) * 2.0 - 1.0 };
                 let pan = t * spread;

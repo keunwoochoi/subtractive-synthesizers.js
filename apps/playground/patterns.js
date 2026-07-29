@@ -126,7 +126,7 @@ export const PATTERN_FOR = {
   "growl-bass":"wobble", "pluck-bass":"slap-funk", "wide-bass":"rolling-dnb",
 
   "square-lead":"chip-melody", "saw-lead":"trance-lead", "supersaw":"anthem",
-  "fifths-lead":"power-fifths", "soft-lead":"ballad", "buzz-lead":"power-fifths",
+  "fifths-lead":"power-fifths", "sync-lead":"trance-lead", "soft-lead":"ballad", "buzz-lead":"power-fifths",
   "pwm-lead":"synthpop", "whistle-lead":"ballad", "sci-fi":"chip-melody",
 
   "warm-pad":"pad-progression", "string-pad":"pad-progression",

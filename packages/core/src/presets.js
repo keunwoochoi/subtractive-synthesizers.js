@@ -21,7 +21,7 @@ export const DEFAULTS = {
   chorusMix: 0, chorusRate: 0.6, chorusDepth: 3,
   delayMix: 0, delayTime: 0.25, delayFeedback: 0.35, delayTone: 3200,
   reverbMix: 0, reverbSize: 0.6, reverbDamp: 4200, reverbPredelay: 18,
-  stereoWidth: 0.7,
+  stereoWidth: 0.7, syncRatio: 1,
   gain: 0.32,
 };
 
@@ -57,6 +57,14 @@ export const PRESETS = {
   "supersaw": { label: "Supersaw", group: "lead",
     blurb: "Seven detuned saws. Wide enough to be its own chord.",
     params: { shape: W.saw, filterKind: F.lp, unison: 7, detuneCents: 26, subLevel: 0.1, cutoffHz: 2600, resonance: 0.2, drive: 1.3, envAmount: 1800, keyTrack: 0.6, ampAttack: 0.012, ampDecay: 0.5, ampSustain: 0.85, ampRelease: 0.35, fltDecay: 0.6, fltSustain: 0.6, velToCutoff: 1800, reverbMix: 0.35, reverbSize: 0.7, delayMix: 0.22, gain: 0.152 , stereoWidth: 1.0 } },
+  "sync-lead": { label: "Sync lead", group: "lead",
+    blurb: "Hard sync. The pitch holds while the timbre tears upward.",
+    params: { shape: W.saw, filterKind: F.ladder, unison: 2, detuneCents: 6,
+      subLevel: 0.1, cutoffHz: 3200, resonance: 0.25, drive: 1.6, envAmount: 1200,
+      keyTrack: 0.5, syncRatio: 2.7, ampAttack: 0.008, ampSustain: 0.85,
+      ampRelease: 0.2, fltSustain: 0.6, lfoRate: 0.35, lfoToCutoff: 600,
+      stereoWidth: 0.4, reverbMix: 0.3, delayMix: 0.22, gain: 0.153 } },
+
   "fifths-lead": { label: "Fifths lead", group: "lead",
     blurb: "Two voices a fifth apart. Instantly bigger than one note.",
     params: { shape: W.saw, filterKind: F.ladder, unison: 2, detuneCents: 1400, subLevel: 0.15, cutoffHz: 1800, resonance: 0.3, drive: 1.4, envAmount: 1800, keyTrack: 0.6, ampAttack: 0.01, ampSustain: 0.8, ampRelease: 0.2, fltSustain: 0.45, reverbMix: 0.25, gain: 0.314 } },

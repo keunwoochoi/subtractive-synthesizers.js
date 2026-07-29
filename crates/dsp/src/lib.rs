@@ -374,6 +374,7 @@ pub unsafe extern "C" fn set_param(p: *mut Engine, id: u32, v: f32) {
         36 => e.patch.lfo_pwm = v,
         37 => e.patch.filter_kind = voice::FilterKind::from_u32(v as u32),
         38 => e.patch.stereo_width = v,
+        39 => e.patch.sync_ratio = v.clamp(1.0, 8.0),
         _ => {}
     }
 }
