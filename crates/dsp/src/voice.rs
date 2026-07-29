@@ -137,6 +137,8 @@ pub struct Patch {
     pub lfo_pitch_cents: f32,
     pub lfo_cutoff_hz: f32,
     pub lfo_pwm: f32,
+    /// 0 = mono, 1 = unison spread across the full image.
+    pub stereo_width: f32,
     pub pulse_width: f32,
     pub detune_cents: f32,
     pub sub_level: f32,
@@ -162,6 +164,7 @@ impl Patch {
             lfo_pitch_cents: 0.0,
             lfo_cutoff_hz: 0.0,
             lfo_pwm: 0.0,
+            stereo_width: 0.7,
             pulse_width: 0.5,
             detune_cents: 8.0,
             sub_level: 0.35,
@@ -186,14 +189,14 @@ pub struct Voice {
     osc: [Osc; MAX_UNISON],
     sub: Osc,
     /// Decimator for the 2x-oversampled path.
-    hb: HalfBand,
+    hb: [HalfBand; 2],
     /// Portamento state: where the pitch is now, and where it is heading.
     f_now: f32,
     glide_c: f32,
     noise: Noise,
-    filter: Ladder,
-    diode: Diode,
-    svf: Svf,
+    filter: [Ladder; 2],
+    diode: [Diode; 2],
+    svf: [Svf; 2],
     amp_env: Adsr,
     flt_env: Adsr,
     f0: f32,
@@ -212,13 +215,13 @@ impl Voice {
             age: 0,
             osc: [Osc::new(); MAX_UNISON],
             sub: Osc::new(),
-            hb: HalfBand::new(),
+            hb: [HalfBand::new(); 2],
             f_now: 440.0,
             glide_c: 1.0,
             noise: Noise::new(1),
-            filter: Ladder::new(),
-            diode: Diode::new(),
-            svf: Svf::new(),
+            filter: [Ladder::new(); 2],
+            diode: [Diode::new(); 2],
+            svf: [Svf::new(); 2],
             amp_env: Adsr::new(),
             flt_env: Adsr::new(),
             f0: 440.0,
@@ -258,10 +261,12 @@ impl Voice {
             1.0
         };
 
-        self.filter.reset();
-        self.diode.reset();
-        self.svf.reset();
-        self.hb.reset();
+        for i in 0..2 {
+            self.filter[i].reset();
+            self.diode[i].reset();
+            self.svf[i].reset();
+            self.hb[i].reset();
+        }
         let (a, d, s, r) = patch.amp;
         self.amp_env.set(a, d, s, r, sr);
         let (fa, fd, fs, fr) = patch.flt;
@@ -297,9 +302,9 @@ impl Voice {
     /// creates harmonics above the audible band -- the step discontinuities, the
     /// saturated feedback -- gets an extra octave of room before it can fold back.
     #[inline]
-    pub fn tick(&mut self, patch: &Patch, sr: f32, lfo: f32) -> f32 {
+    pub fn tick(&mut self, patch: &Patch, sr: f32, lfo: f32) -> (f32, f32) {
         if !self.active {
-            return 0.0;
+            return (0.0, 0.0);
         }
         let sr2 = sr * 2.0;
 
@@ -323,10 +328,12 @@ impl Voice {
             + self.vel * patch.vel_to_cutoff
             + lfo * patch.lfo_cutoff_hz)
             .clamp(20.0, sr2 * 0.45);
-        match patch.filter_kind {
-            FilterKind::LadderLp => self.filter.set(cutoff, patch.resonance, patch.drive, sr2),
-            FilterKind::DiodeLp => self.diode.set(cutoff, patch.resonance, patch.drive, sr2),
-            _ => self.svf.set(cutoff, patch.resonance, sr2),
+        for i in 0..2 {
+            match patch.filter_kind {
+                FilterKind::LadderLp => self.filter[i].set(cutoff, patch.resonance, patch.drive, sr2),
+                FilterKind::DiodeLp => self.diode[i].set(cutoff, patch.resonance, patch.drive, sr2),
+                _ => self.svf[i].set(cutoff, patch.resonance, sr2),
+            }
         }
 
         let _ = patch.filter_kind.is_svf();
@@ -336,44 +343,65 @@ impl Voice {
         let norm = 0.8 / (n as f32).sqrt();
         let pw = (patch.pulse_width + lfo * patch.lfo_pwm).clamp(0.05, 0.95);
 
-        let mut half = [0.0f32; 2];
+        // Spread the unison stack across the image. This is where width comes from:
+        // oscillator i sits at the same position in the stereo field as it does in the
+        // detune spread, so the widest-detuned voices are also the widest-panned.
+        let spread = patch.stereo_width.clamp(0.0, 1.0);
+
+        let mut half_l = [0.0f32; 2];
+        let mut half_r = [0.0f32; 2];
         for k in 0..2 {
-            let mut oscs = 0.0;
+            let mut l = 0.0;
+            let mut r = 0.0;
             for i in 0..n {
-                oscs += self.osc[i].tick(patch.shape, pw);
+                let v = self.osc[i].tick(patch.shape, pw);
+                let t = if n == 1 { 0.0 } else { (i as f32 / (n - 1) as f32) * 2.0 - 1.0 };
+                let pan = t * spread;
+                // Equal power, so widening does not change how loud the patch is.
+                l += v * ((1.0 - pan) * 0.5).sqrt();
+                r += v * ((1.0 + pan) * 0.5).sqrt();
             }
+            // Sub and noise stay centred: a sub-bass that wanders is a mix problem, and
+            // noise spread across the image just sounds like a broken speaker.
             let sub = self.sub.tick(Shape::Pulse, 0.5) * patch.sub_level;
             let nz = if patch.noise_level > 0.0 {
                 self.noise.tick() * patch.noise_level
             } else {
                 0.0
             };
-            let mixed = oscs * norm + sub * 0.5 + nz * 0.3;
-            half[k] = match patch.filter_kind {
-                FilterKind::LadderLp => self.filter.process(mixed),
-                FilterKind::DiodeLp => self.diode.process(mixed),
-                kind => {
-                    // Drive is applied here for the SVF, which has no internal drive of
-                    // its own; without it, switching to a state-variable mode would
-                    // silently drop the level the ladder modes are voiced around.
-                    let (lp, bp, hp) = self.svf.process_all(mixed * patch.drive);
-                    match kind {
-                        FilterKind::SvfBp => bp,
-                        FilterKind::SvfHp => hp,
-                        FilterKind::SvfNotch => lp + hp,
-                        _ => lp,
+            let centre = sub * 0.5 + nz * 0.3;
+            let inputs = [l * norm + centre, r * norm + centre];
+
+            for (ch, x) in inputs.iter().enumerate() {
+                let y = match patch.filter_kind {
+                    FilterKind::LadderLp => self.filter[ch].process(*x),
+                    FilterKind::DiodeLp => self.diode[ch].process(*x),
+                    kind => {
+                        // Drive is applied here for the SVF, which has no internal drive
+                        // of its own; without it, switching to a state-variable mode
+                        // would silently drop the level the ladder modes are voiced at.
+                        let (lp, bp, hp) = self.svf[ch].process_all(*x * patch.drive);
+                        match kind {
+                            FilterKind::SvfBp => bp,
+                            FilterKind::SvfHp => hp,
+                            FilterKind::SvfNotch => lp + hp,
+                            _ => lp,
+                        }
                     }
-                }
-            };
+                };
+                if ch == 0 { half_l[k] = y } else { half_r[k] = y }
+            }
         }
-        let filtered = self.hb.decimate(half[0], half[1]);
+        let fl = self.hb[0].decimate(half_l[0], half_l[1]);
+        let fr = self.hb[1].decimate(half_r[0], half_r[1]);
 
         let amp = self.amp_env.tick();
         if self.amp_env.is_idle() {
             self.active = false;
         }
         self.age = self.age.saturating_add(1);
-        filtered * amp * (0.25 + 0.75 * self.vel)
+        let g = amp * (0.25 + 0.75 * self.vel);
+        (fl * g, fr * g)
     }
 }
 

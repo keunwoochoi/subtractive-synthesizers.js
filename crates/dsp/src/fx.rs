@@ -86,7 +86,10 @@ impl Chorus {
     }
 
     #[inline]
-    pub fn process(&mut self, x: f32) -> f32 {
+    pub fn process(&mut self, xl: f32, xr: f32) -> (f32, f32) {
+        // The line is fed the mono sum; the WIDTH comes from where the taps sit, not
+        // from carrying two delay lines.
+        let x = (xl + xr) * 0.5;
         self.buf[self.write] = x;
         self.write = (self.write + 1) & MASK;
 
@@ -95,7 +98,12 @@ impl Chorus {
             self.phase -= 1.0;
         }
 
-        let mut wet = 0.0;
+        // Pan the three taps hard left / centre / hard right. In mono all three summed
+        // to one point and the third tap bought nothing but cost; spread, they are what
+        // makes an ensemble sound wide rather than merely detuned.
+        const TAP_PAN: [f32; 3] = [-1.0, 0.0, 1.0];
+        let mut wl = 0.0;
+        let mut wr = 0.0;
         for k in 0..3 {
             // 120 degrees apart.
             let p = self.phase + k as f32 / 3.0;
@@ -104,11 +112,12 @@ impl Chorus {
             // ~4 kHz one-pole, the BBD dullness.
             let c = 1.0 - (-TAU * 4000.0 / self.sr).exp();
             self.lp[k] = flush_denormal(self.lp[k] + c * (s - self.lp[k]));
-            wet += self.lp[k];
+            let pan = TAP_PAN[k];
+            wl += self.lp[k] * ((1.0 - pan) * 0.5).sqrt();
+            wr += self.lp[k] * ((1.0 + pan) * 0.5).sqrt();
         }
-        wet *= 0.4;
-
-        x * (1.0 - 0.5 * self.mix) + wet * self.mix
+        let dry = 1.0 - 0.5 * self.mix;
+        (xl * dry + wl * 0.55 * self.mix, xr * dry + wr * 0.55 * self.mix)
     }
 }
 
@@ -134,11 +143,13 @@ impl Chorus {
 /// stack of copies: each repeat loses top end, so the tail recedes instead of piling up.
 pub struct Delay {
     buf: alloc::vec::Vec<f32>,
+    buf_r: alloc::vec::Vec<f32>,
     write: usize,
     delay: f32,
     feedback: f32,
     mix: f32,
     damp_state: f32,
+    damp_r: f32,
     damp_c: f32,
 }
 
@@ -148,11 +159,13 @@ impl Delay {
         let n = (sr * 1.5) as usize + 4;
         Delay {
             buf: alloc::vec![0.0; n],
+            buf_r: alloc::vec![0.0; n],
             write: 0,
             delay: sr * 0.25,
             feedback: 0.35,
             mix: 0.0,
             damp_state: 0.0,
+            damp_r: 0.0,
             damp_c: 0.35,
         }
     }
@@ -171,28 +184,48 @@ impl Delay {
     }
 
     pub fn reset(&mut self) {
-        for s in self.buf.iter_mut() {
+        for s in self.buf.iter_mut().chain(self.buf_r.iter_mut()) {
             *s = 0.0;
         }
         self.damp_state = 0.0;
+        self.damp_r = 0.0;
     }
 
     #[inline]
-    pub fn process(&mut self, x: f32) -> f32 {
-        let n = self.buf.len();
-        let pos = self.write as f32 - self.delay;
+    fn tap(buf: &[f32], write: usize, delay: f32) -> f32 {
+        let n = buf.len();
+        let pos = write as f32 - delay;
         let pos = if pos < 0.0 { pos + n as f32 } else { pos };
         let i = pos as usize % n;
         let frac = pos - pos.floor();
-        let a = self.buf[i];
-        let b = self.buf[(i + 1) % n];
-        let echo = a + (b - a) * frac;
+        let a = buf[i];
+        let b = buf[(i + 1) % n];
+        a + (b - a) * frac
+    }
 
-        self.damp_state = flush_denormal(self.damp_state + self.damp_c * (echo - self.damp_state));
-        self.buf[self.write] = flush_denormal(x + self.damp_state * self.feedback);
+    /// Ping-pong: each side's repeat feeds the OTHER side. A mono delay just makes a
+    /// sound longer; a ping-pong delay makes it move, which is why every hardware unit
+    /// that has one puts it on the front panel.
+    #[inline]
+    pub fn process(&mut self, xl: f32, xr: f32) -> (f32, f32) {
+        let n = self.buf.len();
+        let el = Self::tap(&self.buf, self.write, self.delay);
+        let er = Self::tap(&self.buf_r, self.write, self.delay);
+
+        self.damp_state = flush_denormal(self.damp_state + self.damp_c * (el - self.damp_state));
+        self.damp_r = flush_denormal(self.damp_r + self.damp_c * (er - self.damp_r));
+
+        // The input enters ONE side only. Feeding both and crossing the feedback looks
+        // like ping-pong on paper and is silent as an effect: with a symmetric input the
+        // two lines stay symmetric forever and L == R exactly, which is what the first
+        // version measured (-inf dB of difference). Injecting on the left makes the
+        // first repeat left, the second right, and so on -- the bounce IS the effect.
+        let x = (xl + xr) * 0.5;
+        self.buf[self.write] = flush_denormal(x + self.damp_r * self.feedback);
+        self.buf_r[self.write] = flush_denormal(self.damp_state * self.feedback);
         self.write = (self.write + 1) % n;
 
-        x + echo * self.mix
+        (xl + el * self.mix, xr + er * self.mix)
     }
 }
 
@@ -276,7 +309,8 @@ impl Reverb {
     }
 
     #[inline]
-    pub fn process(&mut self, x: f32) -> f32 {
+    pub fn process(&mut self, xl: f32, xr: f32) -> (f32, f32) {
+        let x = (xl + xr) * 0.5;
         // Predelay: the gap before the tail is most of what makes a space feel large.
         let pl = self.predelay.len();
         let rd = (self.pd_write + pl - self.pd_len) % pl;
@@ -305,7 +339,10 @@ impl Reverb {
             self.li[k] = (self.li[k] + 1) % n;
         }
 
-        let wet = (out[0] + out[1] + out[2] + out[3]) * 0.35;
-        x + wet * self.mix
+        // Lines 0/2 to the left, 1/3 to the right. Summing all four to one channel was
+        // throwing away a stereo field the network already produced for free.
+        let wl = (out[0] + out[2]) * 0.5;
+        let wr = (out[1] + out[3]) * 0.5;
+        (xl + wl * self.mix, xr + wr * self.mix)
     }
 }

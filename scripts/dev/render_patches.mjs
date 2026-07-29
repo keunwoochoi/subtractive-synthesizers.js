@@ -1,19 +1,16 @@
 // Render every patch and report a K-weighted loudness estimate, as JSON on stdout.
 // Used by match_loudness.py; kept separate because the WASM lives on the node side.
 import { readFileSync } from "node:fs";
+// PARAM is IMPORTED, not mirrored. The previous copy carried a comment claiming it
+// was generated from the same source; it was hand-written, and it broke the moment
+// stereoWidth was added -- "unknown param stereoWidth" on a patch that was fine.
+import { PARAM } from "../../packages/core/src/index.js";
 import { PRESETS, DEFAULTS } from "../../packages/core/src/presets.js";
 
 const SR = 48000;
 const { instance } = await WebAssembly.instantiate(
   readFileSync("packages/core/wasm/subtractive_dsp.wasm"), {});
 const x = instance.exports;
-const PARAM = { shape:0,pulseWidth:1,detuneCents:2,subLevel:3,noiseLevel:4,cutoffHz:5,
-  resonance:6,drive:7,envAmount:8,keyTrack:9,ampAttack:10,ampDecay:11,ampSustain:12,
-  ampRelease:13,fltAttack:14,fltDecay:15,fltSustain:16,fltRelease:17,velToCutoff:18,
-  gain:19,chorusRate:20,chorusDepth:21,chorusMix:22,delayMix:23,delayTime:24,
-  delayFeedback:25,delayTone:26,reverbMix:27,reverbSize:28,reverbDamp:29,
-  reverbPredelay:30,unison:31,glide:32,lfoRate:33,lfoToPitch:34,lfoToCutoff:35,
-  lfoToPwm:36,filterKind:37 };
 
 // Notes a patch is actually played at. Judging a sub-bass at C6 or a bell at C2 measures
 // the wrong thing; each group is levelled where it lives.
@@ -74,7 +71,11 @@ for (const [name, preset] of Object.entries(PRESETS)) {
   for (let i = 0; i < n; i += 128) {
     const f = Math.min(128, n - i);
     x.render(e, f);
-    buf.set(new Float32Array(x.memory.buffer, x.out_ptr(e), f), i);
+    // The MONO SUM: loudness is what a listener hears, and reading only the left channel
+    // under-measures every wide patch -- which would then be gain-matched too loud.
+    const L = new Float32Array(x.memory.buffer, x.out_ptr(e), f);
+    const R = new Float32Array(x.memory.buffer, x.out_ptr_r(e), f);
+    for (let j = 0; j < f; j++) buf[i + j] = (L[j] + R[j]) * 0.5;
   }
   x.engine_free(e);
   out[name] = { lu: gatedLoudness(kWeight(buf)), gain: params.gain };

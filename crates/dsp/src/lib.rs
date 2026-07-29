@@ -38,7 +38,8 @@ pub struct Engine {
     patch: Patch,
     seed: u32,
     gain: f32,
-    out: [f32; MAX_BLOCK],
+    out_l: [f32; MAX_BLOCK],
+    out_r: [f32; MAX_BLOCK],
     /// Measurement-only oscillator. Persistent because phase MUST be continuous across
     /// blocks: a probe that restarts every 128 samples manufactures a discontinuity at
     /// each boundary, and the alias metric would then be measuring the harness rather
@@ -79,7 +80,8 @@ impl Engine {
             patch: Patch::init(),
             seed: 0x2545_F491,
             gain: 0.35,
-            out: [0.0; MAX_BLOCK],
+            out_l: [0.0; MAX_BLOCK],
+            out_r: [0.0; MAX_BLOCK],
             probe: osc::Osc::new(),
             probe_hz: -1.0,
             probe_hb: filter::HalfBand::new(),
@@ -164,8 +166,9 @@ impl Engine {
 
     pub fn render(&mut self, frames: usize) {
         let n = frames.min(MAX_BLOCK);
-        for s in self.out[..n].iter_mut() {
-            *s = 0.0;
+        for i in 0..n {
+            self.out_l[i] = 0.0;
+            self.out_r[i] = 0.0;
         }
 
         // The LFO is evaluated ONCE per block into a scratch buffer, then read by every
@@ -188,26 +191,37 @@ impl Engine {
                 continue;
             }
             for i in 0..n {
-                self.out[i] += v.tick(&self.patch, self.sr, self.lfo_buf[i]);
+                let (l, r) = v.tick(&self.patch, self.sr, self.lfo_buf[i]);
+                self.out_l[i] += l;
+                self.out_r[i] += r;
             }
         }
+        // Order is width -> rhythm -> space, the way a hardware send chain is wired:
+        // the reverb should hear the repeats, not the other way round.
         if self.chorus.is_active() {
-            for s in self.out[..n].iter_mut() {
-                *s = self.chorus.process(*s);
+            for i in 0..n {
+                let (l, r) = self.chorus.process(self.out_l[i], self.out_r[i]);
+                self.out_l[i] = l;
+                self.out_r[i] = r;
             }
         }
         if self.delay.is_active() {
-            for s in self.out[..n].iter_mut() {
-                *s = self.delay.process(*s);
+            for i in 0..n {
+                let (l, r) = self.delay.process(self.out_l[i], self.out_r[i]);
+                self.out_l[i] = l;
+                self.out_r[i] = r;
             }
         }
         if self.reverb.is_active() {
-            for s in self.out[..n].iter_mut() {
-                *s = self.reverb.process(*s);
+            for i in 0..n {
+                let (l, r) = self.reverb.process(self.out_l[i], self.out_r[i]);
+                self.out_l[i] = l;
+                self.out_r[i] = r;
             }
         }
-        for s in self.out[..n].iter_mut() {
-            *s = soft_clip(*s * self.gain);
+        for i in 0..n {
+            self.out_l[i] = soft_clip(self.out_l[i] * self.gain);
+            self.out_r[i] = soft_clip(self.out_r[i] * self.gain);
         }
     }
 }
@@ -274,7 +288,19 @@ pub unsafe extern "C" fn render(p: *mut Engine, frames: u32) {
 #[no_mangle]
 pub unsafe extern "C" fn out_ptr(p: *mut Engine) -> *const f32 {
     match unsafe { p.as_ref() } {
-        Some(e) => e.out.as_ptr(),
+        Some(e) => e.out_l.as_ptr(),
+        None => core::ptr::null(),
+    }
+}
+
+/// Right channel. The engine is stereo; `out_ptr` is the left.
+///
+/// # Safety
+/// `p` must be a live pointer from `engine_new`.
+#[no_mangle]
+pub unsafe extern "C" fn out_ptr_r(p: *mut Engine) -> *const f32 {
+    match unsafe { p.as_ref() } {
+        Some(e) => e.out_r.as_ptr(),
         None => core::ptr::null(),
     }
 }
@@ -347,6 +373,7 @@ pub unsafe extern "C" fn set_param(p: *mut Engine, id: u32, v: f32) {
         35 => e.patch.lfo_cutoff_hz = v,
         36 => e.patch.lfo_pwm = v,
         37 => e.patch.filter_kind = voice::FilterKind::from_u32(v as u32),
+        38 => e.patch.stereo_width = v,
         _ => {}
     }
 }
@@ -374,11 +401,11 @@ pub unsafe extern "C" fn render_osc(p: *mut Engine, hz: f32, shape: u32, frames:
         for i in 0..n {
             let a = e.probe.tick(sh, 0.5);
             let b = e.probe.tick(sh, 0.5);
-            e.out[i] = e.probe_hb.decimate(a, b);
+            e.out_l[i] = e.probe_hb.decimate(a, b);
         }
     } else {
         for i in 0..n {
-            e.out[i] = e.probe.tick(sh, 0.5);
+            e.out_l[i] = e.probe.tick(sh, 0.5);
         }
     }
 }

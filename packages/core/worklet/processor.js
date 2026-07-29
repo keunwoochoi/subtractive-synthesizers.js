@@ -5,7 +5,8 @@ class SubtractiveProcessor extends AudioWorkletProcessor {
     super();
     this.engine = 0;
     this.wasm = null;
-    this.view = null;
+    this.viewL = null;
+    this.viewR = null;
     // Sorted pending events. A plain array with a monotonic read cursor, never shift():
     // shift() on a hot queue is O(n) per call and O(n^2) per block.
     this.queue = [];
@@ -76,12 +77,16 @@ class SubtractiveProcessor extends AudioWorkletProcessor {
   render(out, offset, frames) {
     if (frames <= 0) return;
     this.wasm.render(this.engine, frames);
+    // Rebuild the views only when WASM memory has grown; allocating a Float32Array per
+    // block is exactly the GC pressure that produces dropouts under polyphony.
     const mem = this.wasm.memory.buffer;
-    if (!this.view || this.view.buffer !== mem) {
-      this.view = new Float32Array(mem, this.wasm.out_ptr(this.engine), 128);
+    if (!this.viewL || this.viewL.buffer !== mem) {
+      this.viewL = new Float32Array(mem, this.wasm.out_ptr(this.engine), 128);
+      this.viewR = new Float32Array(mem, this.wasm.out_ptr_r(this.engine), 128);
     }
-    const src = this.view.subarray(0, frames);
-    for (let ch = 0; ch < out.length; ch++) out[ch].set(src, offset);
+    out[0].set(this.viewL.subarray(0, frames), offset);
+    // A mono output still gets the left channel rather than silence.
+    if (out.length > 1) out[1].set(this.viewR.subarray(0, frames), offset);
   }
 
   process(_inputs, outputs) {

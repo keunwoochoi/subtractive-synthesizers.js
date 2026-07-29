@@ -14,7 +14,9 @@ const SR = 48000;
 const P = { ampSustain: 12, ampRelease: 13, gain: 19, chorusRate: 20, chorusDepth: 21,
             chorusMix: 22, resonance: 6, cutoffHz: 5, drive: 7,
             delayMix: 23, delayTime: 24, delayFeedback: 25,
-            reverbMix: 27, reverbSize: 28, filterKind: 37 };
+            reverbMix: 27, reverbSize: 28, filterKind: 37,
+            unison: 31, detuneCents: 2, stereoWidth: 38, ampRelease2: 13,
+            delayTime: 24, delayFeedback: 25 };
 
 const { instance } = await WebAssembly.instantiate(readFileSync(WASM), {});
 const x = instance.exports;
@@ -24,6 +26,29 @@ const check = (ok, name, detail) => {
   if (ok) console.log(`  ok    ${name}${detail ? " — " + detail : ""}`);
   else { console.log(`  FAIL  ${name} — ${detail}`); fails.push(name); }
 };
+
+/** Render the MONO SUM. Since the delay went ping-pong, the left channel alone carries
+ * only every other repeat -- two timing checks here failed on correct behaviour because
+ * they were still reading one channel of a two-channel effect. Anything measuring the
+ * effect as a whole (timing, decay, level) wants the sum; anything measuring WIDTH must
+ * read the channels separately, which the stereo block below does. */
+function renderSum(seconds, setup, events = []) {
+  const e = x.engine_new(SR);
+  setup(e);
+  const n = Math.floor(SR * seconds);
+  const out = new Float32Array(n);
+  const pending = [...events].sort((a, b) => a[0] - b[0]);
+  for (let i = 0; i < n; i += 128) {
+    while (pending.length && pending[0][0] * SR <= i) pending.shift()[1](e);
+    const f = Math.min(128, n - i);
+    x.render(e, f);
+    const L = new Float32Array(x.memory.buffer, x.out_ptr(e), f);
+    const R = new Float32Array(x.memory.buffer, x.out_ptr_r(e), f);
+    for (let j = 0; j < f; j++) out[i + j] = (L[j] + R[j]) * 0.5;
+  }
+  x.engine_free(e);
+  return out;
+}
 
 /** Render `seconds` of the engine after running `setup`, in real 128-frame blocks.
  *
@@ -161,7 +186,7 @@ console.log("engine checks (shipped WASM)\n");
 // --- delay: a repeat must appear AT THE TIME ASKED FOR, not merely somewhere
 {
   const T = 0.25;
-  const a = render(1.6, (e) => {
+  const a = renderSum(1.6, (e) => {
     x.set_param(e, P.ampSustain, 0.0);
     x.set_param(e, P.ampRelease, 0.02);
     x.set_param(e, P.delayTime, T);
@@ -253,6 +278,76 @@ console.log("engine checks (shipped WASM)\n");
              + Math.abs(lad.hi - dio.hi);
   check(diff > 0.02, "diode ladder differs from the transistor ladder",
         `band-balance distance ${diff.toFixed(3)}`);
+}
+
+// --- stereo: the engine has two channels, and they must not be the same channel
+{
+  const stereoRender = (seconds, setup) => {
+    const e = x.engine_new(SR);
+    setup(e);
+    const n = Math.floor(SR * seconds);
+    const L = new Float32Array(n), R = new Float32Array(n);
+    for (let i = 0; i < n; i += 128) {
+      const f = Math.min(128, n - i);
+      x.render(e, f);
+      L.set(new Float32Array(x.memory.buffer, x.out_ptr(e), f), i);
+      R.set(new Float32Array(x.memory.buffer, x.out_ptr_r(e), f), i);
+    }
+    x.engine_free(e);
+    let d = 0, s = 0;
+    for (let i = 0; i < n; i++) { d += (L[i] - R[i]) ** 2; s += (L[i] ** 2 + R[i] ** 2) / 2; }
+    return { widthDb: 10 * Math.log10((d / n) / ((s / n) || 1e-30)), L, R };
+  };
+
+  const wide = stereoRender(1.5, (e) => {
+    x.set_param(e, P.ampSustain, 0.9); x.set_param(e, P.unison, 7);
+    x.set_param(e, P.detuneCents, 26); x.set_param(e, P.stereoWidth, 1);
+    x.note_on(e, 60, 0.9);
+  });
+  const mono = stereoRender(1.5, (e) => {
+    x.set_param(e, P.ampSustain, 0.9); x.set_param(e, P.unison, 7);
+    x.set_param(e, P.detuneCents, 26); x.set_param(e, P.stereoWidth, 0);
+    x.note_on(e, 60, 0.9);
+  });
+  check(wide.widthDb > -12, "unison spreads across the image",
+        `L/R difference ${wide.widthDb.toFixed(1)} dB`);
+  // width=0 must be EXACTLY mono, not just narrow: a patch that has to sit centred
+  // (a sub-bass) cannot be allowed to wander.
+  check(!Number.isFinite(mono.widthDb) || mono.widthDb < -100,
+        "width 0 is exactly mono", `${mono.widthDb} dB`);
+
+  for (const [name, setup] of [
+    ["chorus", (e) => { x.set_param(e, P.chorusMix, 0.85); }],
+    ["reverb", (e) => { x.set_param(e, P.reverbMix, 0.7); }],
+  ]) {
+    const r = stereoRender(1.5, (e) => {
+      x.set_param(e, P.ampSustain, 0.9); x.set_param(e, P.stereoWidth, 0);
+      setup(e); x.note_on(e, 60, 0.9);
+    });
+    check(r.widthDb > -12, `${name} produces width from a mono source`,
+          `${r.widthDb.toFixed(1)} dB`);
+  }
+
+  // Ping-pong: repeats must ALTERNATE sides. Feeding both lines and crossing the
+  // feedback looks like ping-pong and measures as pure mono, which is what the first
+  // implementation did.
+  const pp = stereoRender(2.2, (e) => {
+    x.set_param(e, P.ampSustain, 0); x.set_param(e, 13, 0.03);
+    x.set_param(e, P.stereoWidth, 0);
+    x.set_param(e, P.delayTime, 0.25); x.set_param(e, P.delayFeedback, 0.6);
+    x.set_param(e, P.delayMix, 0.9);
+    x.note_on(e, 60, 0.9);
+  });
+  const env = (a, t) => {
+    const w = 2400, i = Math.floor(t * SR);
+    let s = 0; for (let j = 0; j < w; j++) s += a[i + j] ** 2;
+    return Math.sqrt(s / w);
+  };
+  const first = env(pp.L, 0.25) > env(pp.R, 0.25);
+  const second = env(pp.R, 0.5) > env(pp.L, 0.5);
+  check(first && second, "delay repeats ping-pong between the channels",
+        `t=0.25 L ${env(pp.L, 0.25).toFixed(4)}/R ${env(pp.R, 0.25).toFixed(4)}, ` +
+        `t=0.50 L ${env(pp.L, 0.5).toFixed(4)}/R ${env(pp.R, 0.5).toFixed(4)}`);
 }
 
 console.log();
