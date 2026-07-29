@@ -19,6 +19,11 @@
   main{max-width:1120px;margin:0 auto;padding:18px 24px 70px}
 
   /* --- signal flow map ------------------------------------------------------ */
+  .patchbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--panel);
+            border:1px solid var(--line);border-radius:9px;padding:12px 16px;margin-bottom:14px}
+  .patchbar label{color:var(--dim);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+  .patchbar select{flex:0 1 260px}
+  #presetBlurb{color:var(--dim);font-size:12px;flex:1 1 220px}
   .flow{background:var(--panel);border:1px solid var(--line);border-radius:9px;
         padding:16px 18px 14px;margin-bottom:18px;overflow-x:auto}
   .flow .chain{display:flex;align-items:center;gap:0;min-width:560px}
@@ -74,6 +79,14 @@
   #kb{margin-top:18px;position:relative;height:150px;user-select:none;touch-action:none;
       border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
   .wk{position:absolute;top:0;bottom:0;background:#f2f4f6;border-right:1px solid #c3c8cf}
+  /* Key letters live ON the keys: a legend under the keyboard makes the reader map
+     thirteen letters onto twenty-five keys themselves, which is the work. */
+  .wk::after,.bk::after{content:attr(data-key);position:absolute;left:0;right:0;
+    text-align:center;font-size:11px;font-weight:600;pointer-events:none}
+  .wk::after{bottom:8px;color:#8b95a3}
+  .bk::after{bottom:6px;color:#c9d1d9}
+  .wk.on::after{color:#5a4318}
+  .bk.on::after{color:#1a1205}
   .wk.on{background:var(--audio)}
   .bk{position:absolute;top:0;height:62%;background:#14171b;border-radius:0 0 3px 3px;
       border:1px solid #000;z-index:2}
@@ -89,7 +102,13 @@
 <main>
   <div class="bar">
     <button id="start">▶ Start audio</button>
-    <div class="hint" id="status">Click to create the AudioContext (browsers require a gesture).</div>
+    <div class="hint" id="status"></div>
+  </div>
+
+  <div class="patchbar">
+    <label for="preset">patch</label>
+    <select id="preset"></select>
+    <span id="presetBlurb"></span>
   </div>
 
   <div class="flow">
@@ -122,7 +141,6 @@
     <div class="panels">
       <div class="panel audio">
         <h2>Oscillator</h2>
-        <p class="to">the source — everything downstream only removes</p>
         <div class="row"><label>shape</label>
           <select id="shape"><option value="0">saw</option><option value="1">pulse</option>
           <option value="2">triangle</option></select></div>
@@ -163,7 +181,7 @@
   </div>
 
   <div class="stage">
-    <h3>2 · Modulation — never heard directly</h3>
+    <h3>2 · Modulation</h3>
     <div class="panels">
       <div class="panel mod">
         <h2>Filter envelope</h2>
@@ -185,7 +203,7 @@
 
       <div class="panel mod">
         <h2>LFO</h2>
-        <p class="to">→ <b>pitch</b>, <b>cutoff</b>, <b>pulse width</b> — one shared triangle</p>
+        <p class="to">→ <b>pitch</b>, <b>cutoff</b>, <b>pulse width</b></p>
         <div class="row"><label>rate</label><input type="range" id="lfoRate" data-param min="0.05" max="16" step="0.05" value="5"><output>5.00</output></div>
         <div class="row"><label>→ pitch</label><input type="range" id="lfoToPitch" data-param min="0" max="60" step="1" value="0"><output>0</output></div>
         <div class="row"><label>→ cutoff</label><input type="range" id="lfoToCutoff" data-param min="0" max="3000" step="25" value="0"><output>0</output></div>
@@ -195,18 +213,16 @@
   </div>
 
   <div class="stage">
-    <h3>3 · Effects — after the voice, before the output</h3>
+    <h3>3 · Effects</h3>
     <div class="panels">
       <div class="panel fx">
         <h2>Chorus</h2>
-        <p class="to">three-phase ensemble — width</p>
         <div class="row"><label>mix</label><input type="range" id="chorusMix" data-param min="0" max="1" step="0.01" value="0"><output>0.00</output></div>
         <div class="row"><label>rate</label><input type="range" id="chorusRate" data-param min="0.05" max="6" step="0.01" value="0.6"><output>0.60</output></div>
         <div class="row"><label>depth</label><input type="range" id="chorusDepth" data-param min="0" max="12" step="0.1" value="3"><output>3.0</output></div>
       </div>
       <div class="panel fx">
         <h2>Delay</h2>
-        <p class="to">damped repeats — rhythm</p>
         <div class="row"><label>mix</label><input type="range" id="delayMix" data-param min="0" max="1" step="0.01" value="0"><output>0.00</output></div>
         <div class="row"><label>time</label><input type="range" id="delayTime" data-param min="0.02" max="1" step="0.005" value="0.25"><output>0.25</output></div>
         <div class="row"><label>feedback</label><input type="range" id="delayFeedback" data-param min="0" max="0.92" step="0.01" value="0.35"><output>0.35</output></div>
@@ -214,7 +230,6 @@
       </div>
       <div class="panel fx">
         <h2>Reverb</h2>
-        <p class="to">the space it sits in</p>
         <div class="row"><label>mix</label><input type="range" id="reverbMix" data-param min="0" max="1" step="0.01" value="0"><output>0.00</output></div>
         <div class="row"><label>size</label><input type="range" id="reverbSize" data-param min="0" max="1" step="0.01" value="0.6"><output>0.60</output></div>
         <div class="row"><label>damping</label><input type="range" id="reverbDamp" data-param min="800" max="14000" step="100" value="4200"><output>4200</output></div>
@@ -224,7 +239,7 @@
   </div>
 
   <div class="stage solo">
-    <h3>4 · Playing — generates notes, not sound</h3>
+    <h3>4 · Playing</h3>
     <div class="panels">
       <div class="panel play">
         <h2>Arpeggiator</h2>
@@ -251,16 +266,17 @@
   </div>
 
   <div id="kb"></div>
-  <div class="hint" style="margin-top:10px">Play with the mouse, or type
-    <code>a w s e d f t g y h u j k</code> — <code>z</code>/<code>x</code> shift octave.
-    <a href="./showcase.html">showcase →</a></div>
+  <div class="hint" style="margin-top:10px">
+    <code>z</code>/<code>x</code> shift octave. <a href="./showcase.html">showcase →</a></div>
 </main>
 
 <script type="module">
 
 import { createEngine, PARAM } from "../../packages/core/src/index.js";
+import { PRESETS, DEFAULTS, GROUPS } from "../../packages/core/src/presets.js";
 
 const LOW = 48, N_KEYS = 25;
+const KEYMAP = { a:0, w:1, s:2, e:3, d:4, f:5, t:6, g:7, y:8, h:9, u:10, j:11, k:12 };
 const BLACK = new Set([1, 3, 6, 8, 10]);
 let engine = null, octave = 0;
 const held = new Set();
@@ -275,7 +291,9 @@ const keyEls = new Map();
     const el = document.createElement("div");
     el.className = "wk";
     el.style.left = `${i * w}%`; el.style.width = `${w}%`;
-    el.dataset.note = note; kb.appendChild(el); keyEls.set(note, el);
+    el.dataset.note = note;
+    labelKey(el, note);
+    kb.appendChild(el); keyEls.set(note, el);
   });
   for (let i = 0; i < N_KEYS; i++) {
     const note = LOW + i;
@@ -284,9 +302,21 @@ const keyEls = new Map();
     const el = document.createElement("div");
     el.className = "bk";
     el.style.left = `${below * w - w * 0.3}%`; el.style.width = `${w * 0.6}%`;
-    el.dataset.note = note; kb.appendChild(el); keyEls.set(note, el);
+    el.dataset.note = note;
+    labelKey(el, note);
+    kb.appendChild(el); keyEls.set(note, el);
   }
 })();
+
+/** Show which computer key plays this note, for the octave currently in reach. */
+function labelKey(el, note) {
+  const semis = note - LOW - octave * 12;
+  const letter = Object.keys(KEYMAP).find((k) => KEYMAP[k] === semis);
+  el.dataset.key = letter ? letter.toUpperCase() : "";
+}
+function relabel() {
+  for (const [note, el] of keyEls) labelKey(el, note);
+}
 
 const arp = {
   on: false, mode: "up", rate: 16, bpm: 120, oct: 1, gate: 0.55, hold: false,
@@ -386,11 +416,10 @@ kb.addEventListener("pointerdown", (e) => {
 kb.addEventListener("pointerup", () => [...held].forEach(up));
 kb.addEventListener("pointerleave", () => [...held].forEach(up));
 
-const KEYMAP = { a:0, w:1, s:2, e:3, d:4, f:5, t:6, g:7, y:8, h:9, u:10, j:11, k:12 };
 addEventListener("keydown", (e) => {
   if (e.repeat) return;
-  if (e.key === "z") { octave = Math.max(-2, octave - 1); return; }
-  if (e.key === "x") { octave = Math.min(2, octave + 1); return; }
+  if (e.key === "z") { octave = Math.max(-2, octave - 1); relabel(); return; }
+  if (e.key === "x") { octave = Math.min(2, octave + 1); relabel(); return; }
   const s = KEYMAP[e.key]; if (s !== undefined) down(LOW + s + octave * 12);
 });
 addEventListener("keyup", (e) => {
@@ -427,7 +456,45 @@ document.getElementById("arpOn").addEventListener("change", (e) => setArp(e.targ
 // Test hook. Deliberately narrow: it exposes the note gates and the arp state, not the
 // module. Without it a browser check cannot see whether the arp scheduled anything, and
 // a check that cannot see is a check that passes for the wrong reason.
-globalThis.__playground = { down, up, arp, get engine() { return engine; } };
+globalThis.__playground = { down, up, arp, loadPreset, get engine() { return engine; } };
+
+// --- patch bank ------------------------------------------------------------------
+// Loading a preset writes it to the ENGINE and to the CONTROLS. Only doing the first
+// would leave every slider showing the previous patch's values, so the editor would lie
+// about the sound it is making -- and the whole point of loading a patch here rather
+// than in the showcase is to see how it is built and then change it.
+const presetSel = document.getElementById("preset");
+const GROUP_LABEL = { bass: "Bass", lead: "Lead", pad: "Pad & atmosphere",
+                      pluck: "Keys & pluck", brass: "Brass & stab" };
+for (const g of GROUPS) {
+  const entries = Object.entries(PRESETS).filter(([, p]) => p.group === g);
+  if (!entries.length) continue;
+  const og = document.createElement("optgroup");
+  og.label = GROUP_LABEL[g] ?? g;
+  for (const [key, p] of entries) {
+    const o = document.createElement("option");
+    o.value = key; o.textContent = p.label;
+    og.appendChild(o);
+  }
+  presetSel.appendChild(og);
+}
+
+function loadPreset(key) {
+  const preset = PRESETS[key];
+  if (!preset) return;
+  const params = { ...DEFAULTS, ...preset.params };
+  for (const [name, value] of Object.entries(params)) {
+    engine?.setParam(name, value);
+    const el = document.getElementById(name);
+    if (!el) continue;                    // parameter with no control on this page
+    el.value = String(value);
+    // Range controls carry a readout that does not update on a programmatic write.
+    if (el.type === "range") el.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  document.getElementById("presetBlurb").textContent = preset.blurb;
+  presetSel.value = key;
+}
+presetSel.addEventListener("change", (e) => loadPreset(e.target.value));
 
 const status = document.getElementById("status");
 document.getElementById("start").addEventListener("click", async (e) => {
@@ -443,6 +510,7 @@ document.getElementById("start").addEventListener("click", async (e) => {
       engine.setParam(el.id, Number(el.value));
     for (const id of ["shape", "filterKind"])
       engine.setParam(id, Number(document.getElementById(id).value));
+    loadPreset(presetSel.value || Object.keys(PRESETS)[0]);
     status.textContent = "";
   } catch (err) {
     status.textContent = `failed: ${err.message}`;

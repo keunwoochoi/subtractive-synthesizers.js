@@ -91,6 +91,22 @@ try {
   const after = await p.evaluate(() => window.__ev.filter(m => m.type === "schedule").length);
   if (after > 0) fail("arp kept scheduling after being switched off");
 
+  // Loading a patch from the bank must write the ENGINE and the CONTROLS. If only the
+  // engine were written, every slider would still show the previous patch and the editor
+  // would be lying about the sound it is making.
+  const readCtl = () => p.evaluate(() => ({
+    cutoff: document.getElementById("cutoffHz").value,
+    unison: document.getElementById("unison").value,
+    filter: document.getElementById("filterKind").value,
+    blurb: document.getElementById("presetBlurb").textContent,
+  }));
+  const sub = await p.evaluate(() => { window.__playground.loadPreset("sub-bass"); }).then(readCtl);
+  const sup = await p.evaluate(() => { window.__playground.loadPreset("supersaw"); }).then(readCtl);
+  if (sub.cutoff === sup.cutoff) fail(`loading a patch did not move cutoff (${sub.cutoff})`);
+  if (sub.unison === sup.unison) fail(`loading a patch did not move unison (${sub.unison})`);
+  if (!sup.blurb) fail("loading a patch did not show its description");
+  if (Number(sup.unison) !== 7) fail(`supersaw should load unison 7, got ${sup.unison}`);
+
   // The filter selector is a <select>, not a range, so it takes a separate code path
   // to the engine. Exercising every kind here catches a wiring break that would
   // otherwise only show up as "the filter menu does nothing".
@@ -102,5 +118,5 @@ try {
   if (kindErr.length) fail("filter type wiring: " + kindErr[0]);
 
   if (errs.length) fail("page errors: " + errs.slice(0, 3).join(" | "));
-  console.log("ARP OK — cycles held notes, respects mode and octave range, stops cleanly; all 6 filter types wire through");
+  console.log("ARP OK — cycles held notes, respects mode and octave range, stops cleanly; all 6 filter types wire through; patch bank loads into the controls");
 } finally { await b.close(); server.kill(); }
