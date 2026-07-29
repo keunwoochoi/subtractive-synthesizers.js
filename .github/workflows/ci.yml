@@ -59,6 +59,8 @@ jobs:
       - run: node scripts/dev/e2e-check.mjs
       - run: node scripts/dev/showcase-check.mjs
       - run: node scripts/dev/arp-check.mjs
+      - run: node scripts/dev/playground-audio-check.mjs
+      - run: BROWSER=webkit node scripts/dev/playground-audio-check.mjs
       # Safari's engine, where audio APIs most often differ. A stated principle
       # ("works where web devs work") that nothing verified until now.
       - run: BROWSER=webkit node scripts/dev/e2e-check.mjs

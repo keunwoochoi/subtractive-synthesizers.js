@@ -496,16 +496,38 @@ function loadPreset(key) {
 }
 presetSel.addEventListener("change", (e) => loadPreset(e.target.value));
 
+// Create and unlock the AudioContext SYNCHRONOUSLY inside the gesture handler.
+//
+// `await createEngine()` fetches the WASM and registers the worklet, and those awaits
+// end the user-gesture context. Safari and iOS then leave the context suspended forever
+// and the page is silent with no error anywhere -- the sibling project shipped exactly
+// this bug and fixed it the same way. Chromium with --autoplay-policy=no-user-gesture-
+// required cannot reproduce it, which is why every headless check passed.
+//
+// Resuming AND playing one silent buffer is the belt-and-braces form: some versions of
+// Safari only consider a context unlocked once it has actually rendered something.
+function unlockedContext() {
+  const ctx = new (globalThis.AudioContext ?? globalThis.webkitAudioContext)();
+  ctx.resume();                       // synchronous: still inside the gesture
+  const src = ctx.createBufferSource();
+  src.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+  src.connect(ctx.destination);
+  src.start(0);
+  return ctx;
+}
+
 const status = document.getElementById("status");
 document.getElementById("start").addEventListener("click", async (e) => {
   e.target.disabled = true;
   status.textContent = "loading engine…";
   try {
+    const ctx = unlockedContext();
     engine = await createEngine({
+      context: ctx,
       wasmUrl: "../../packages/core/wasm/subtractive_dsp.wasm",
       workletUrl: "../../packages/core/worklet/processor.js",
     });
-    await engine.resume();
+    await engine.resume();      // harmless if already running; required if a policy blocked it
     for (const el of document.querySelectorAll("input[type=range][data-param]"))
       engine.setParam(el.id, Number(el.value));
     for (const id of ["shape", "filterKind"])
