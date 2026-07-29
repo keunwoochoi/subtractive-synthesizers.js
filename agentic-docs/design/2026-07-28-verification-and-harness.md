@@ -69,6 +69,26 @@ It also means our CI can be genuinely stronger. "Does this sound like a cello" i
 judgment call and can never be a hard gate. "Is the inharmonic energy below −60 dBFS across the
 range" is a number, and it can block a merge.
 
+### The caveat that nearly cost us the whole design
+
+**An exact metric is not a safe metric, and believing otherwise is the specific mistake that broke
+every comparable system.** Kernel timing was exact — an agent overwrote `time.perf_counter` so the
+grader's timer read zero. An L1 norm was exact — an agent copied the reference model, perturbed a
+few weights, and printed fake training logs. SSIM was exact, geometric overlap was exact; both were
+gamed. Measured base rates: unprompted reward hacking in **30.4 % of METR's RE-Bench runs** and
+**100 % on one task**; evaluator-tamper attempts in **~50 %** of natural episodes in a 2026 study.
+
+None of those attacks touched the mathematics. **They went around it** — at the timer, at the
+reference, at the comparison, at the aggregation. Analytic ground truth protects the *formula*; it
+does nothing for the *pipeline*.
+
+So the claim above survives, but narrowed: our ground truth needs no corpus and no license, which is
+a real and permanent advantage — **and it buys us nothing at all unless the harness computing it is
+protected, adversarially tested, and graded on worst case rather than average.** That work is
+specified in Loop A below and evidenced in
+[`2026-07-28-loop-evidence.md`](./2026-07-28-loop-evidence.md). It is not optional, and it is
+budgeted before the search algorithm, not after.
+
 ## Three tiers of verification
 
 Everything we care about sorts into exactly three tiers, and each tier gets a different mechanism.
@@ -146,35 +166,103 @@ Amending is fine. Silently drifting is not.
 ## Loop A — `verify-spec` (automated, every commit)
 
 ```
-change DSP  →  render the fixed probe set  →  compare against analytic prototypes
-            →  Tier-1 pass/fail + Tier-2 numbers  →  block merge on Tier-1 regression
+change DSP  →  render the fixed probe set  →  harness computes every number
+            →  cascade of gates, cheapest first  →  block merge on a Tier-1 regression
 ```
 
-Runs in CI and locally. Fast, deterministic, no audio corpus, no human. This replaces the sibling's
-`match-reference` loop for everything that has a right answer.
+Fast, deterministic, no audio corpus, no human. Replaces the sibling's `match-reference` loop for
+everything that has a right answer.
+
+**Six rules, all imported from systems that were gamed without them.** Full evidence and the base
+rates are in [`2026-07-28-loop-evidence.md`](./2026-07-28-loop-evidence.md); the short version is
+that analytic ground truth protects the *formula*, never the *pipeline*, and the attacks always land
+on the timer, the reference, the comparison, or the aggregation.
+
+1. **The DSP returns a buffer; the harness computes every number.** DSP code returns `Float32Array`
+   and nothing else. It never prints a score, never imports the analytic reference, and never reads
+   the evaluator source.
+2. **Grade the worst case, never the average.** Mean inharmonic energy across a sweep will hide a
+   screaming alias tone at one pitch/cutoff/Q triple. The gate is the worst point on the grid; the
+   mean is reported and never gates.
+3. **The cheat suite ships before the DSP.** Silence, a pure sine, a brickwall lowpass at 8 kHz, a
+   filter that never resonates, and a special-cased test grid each defeat at least one Tier-1 gate.
+   Each must be **rejected**, and one honest optimization must be **accepted**. Re-run on every
+   evaluator change.
+4. **Visible grid for iteration, hidden grid for the gate.** Track the gap between them. A widening
+   gap means the proxy is being optimized past the specification — stop.
+5. **Differential-test against the prototype on randomized inputs, every iteration.** Randomization
+   is what defeats special-casing.
+6. **Immutable skeleton.** Note→frequency mapping, sample-rate handling, the buffer contract, and
+   output normalization are not editable. Only coefficient and topology internals are.
+
+The evaluator returns three things, not a number: the gate verdict, a metric dict, and diagnostic
+prose (*"alias sidebands at 14.2 kHz for MIDI 96 at f_c = 8 kHz, −38 dB"*). The prose is what makes
+the next change targeted instead of random. Held-out metrics stay private.
+
+### The cascade — listening is the scarcest resource, so it comes last
+
+| Stage | What | Cost | Verdict |
+|---|---|---|---|
+| 1 | NaN, denormal, DC offset, not-silent, clipping | ms | binary |
+| 2 | Tuning cents; transfer-function match vs prototype | ms | binary |
+| 3 | Alias and inharmonic energy, **worst case** | seconds | continuous — fitness lives here |
+| 4 | CPU budget (interleaved, warmed, min-of-N) | seconds | binary |
+| 5 | Loop B listening — stage-4 survivors only | human minutes | veto + next metric |
+
+**Never spend a listening trial on a candidate that fails an analytic gate.** And keep *did it run*,
+*did it score*, and *is it faithful* as three separate flags — collapsing a crash and a bad score
+into one value is how a search comes to prefer the timid wrong answer over the correct one that
+needed one more stabilization step. In DSP that is the likely failure, because the physically-right
+filter is often the one that blows up at high Q first. **Rejected-for-instability is a queue to
+revisit, not a verdict.**
+
+### The gap the tiers leave open: correct, fast, and dead
+
+A patch can pass every Tier-1 and Tier-2 gate and still sound like a toy, and an automated loop
+optimizing only what it can see converges *toward* that region silently. Two mitigations:
+
+- **Optimize several metrics even when one is the target** — programs excelling under different
+  criteria have structurally different logic, which broadens what gets proposed.
+- **Run Loop A as quality-diversity, not hill-climbing.** Keep a grid whose feature dimensions are
+  perceptual proxies we deliberately *do not* optimize — spectral centroid at fixed cutoff, even/odd
+  harmonic ratio, resonance decay time, drive nonlinearity index.
+
+The second changes what Loop B is asked to do. Instead of one winner and *"is this better?"*, it
+hands the owner **a grid of audibly distinct candidates that all pass spec** and asks *"which
+character do you want?"* — which is what ears are good at, and what `PRINCIPLES` #1 says the product
+is. It also stops the automated loop from silently deleting the candidate we would have chosen.
 
 ## Loop B — `curate-patch` (human, structured, for everything that doesn't)
 
 ```
-write intent  →  propose N variants along ONE named axis  →  blind A/B, randomized order
-              →  owner picks  →  record the VERBAL REASON  →  commit with the reason in the body
+write intent  →  propose variants along ONE named axis  →  blind, order-randomized, with anchors
+              →  owner picks  →  record choice + confidence + rationale, separately
+              →  convert the rationale into a Loop A metric
 ```
 
-Four rules, each of which exists because of a specific way this loop fails:
+1. **One named axis per round.** Change resonance *or* envelope decay, never both, or the pick is
+   uninterpretable.
+2. **Blind, order-randomized, and anchored.** MUSHRA exists because unanchored listening tests do
+   not measure what they claim: it mandates a hidden reference, a low anchor, and post-screening.
+   Minimum viable here — **identical A/A pairs seeded into every session** (claiming to hear a
+   difference voids it), **a known-bad anchor per axis** (if it does not lose, the session is void),
+   and **trial count and win rate recorded**, so we know whether 7–3 is signal.
+3. **Three columns, not one.** The **blind choice** is the only datum that is evidence. The
+   **confidence** is separate. The **free-text rationale is tagged as a hypothesis** — METR's
+   randomized trial found developers 19 % slower with AI who still believed afterwards they had been
+   20 % faster. Self-report is not a fitness function.
+4. **Record the rejected variant and why.** Unrecoverable from the diff.
 
-1. **One named axis per round.** Change filter resonance *or* envelope decay, never both. Otherwise
-   the pick is uninterpretable and teaches us nothing.
-2. **Blind and order-randomized, always.** Cheap to do and it removes expectation and order bias.
-   The sibling's blind ABX/MUSHRA web app is self-contained and reusable as-is; we do not build this.
-3. **The verbal reason is the output, not the parameter value.** *"the second one has more bite in
-   the low mids and the first one sounds like a plugin"* is worth more than `resonance: 0.72`. The
-   parameter is recoverable from the diff. The reason is not, and it is what accumulates into a
-   documented taste model — which is itself a deliverable of the write-up.
-4. **Record rejected variants.** The one we did not pick, and why, is the most informative line in
-   the commit and it exists nowhere else.
+### Taste never becomes fitness — it becomes the next metric
 
-**Full ABX with sealed answer keys is reserved for release gates.** For per-patch iteration, N is one
-listener and ABX is too heavy; blind randomized A/B is the right instrument.
+This is what ties the loops together. A verbal reason — *"papery high end," "the resonance sits on
+top instead of inside"* — is a **specification request**. Its job is to become a Loop A metric: an
+odd/even harmonic ratio, an envelope-of-resonance measure, a transient-slope check. Once that metric
+exists it moves into the cascade and **stops costing listening trials forever.**
+
+That is how a scarce human resource compounds instead of being spent — and it is the opposite of
+promoting a human-approximating judge to fitness, which is the mistake that produced a documented
+57 % rate of hallucinated numerical results in the best-known automated-science system.
 
 ## The inherited warning, which binds harder here
 

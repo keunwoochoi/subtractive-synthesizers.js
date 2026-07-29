@@ -142,10 +142,13 @@ def audit(root: Path) -> Report:
         text = read(prin)
         r.check(bool(SEMVER_HEADER.search(text)), "C6-CONSTITUTION",
                 "PRINCIPLES.md lacks a '**Version X.Y.Z** ... Ratified YYYY-MM-DD' header")
-        amendments = AMENDMENT_HEAD.findall(text)
-        r.check(bool(amendments), "C6-CONSTITUTION", "PRINCIPLES.md has no amendment record")
-        # Every amendment above the initial ratification must name what it propagates to.
-        blocks = re.split(r"^### (?=\d+\.\d+\.\d+ — )", text, flags=re.M)[1:]
+        # Amendment reasoning lives outside the constitution's context budget, but it must
+        # exist somewhere and every amendment must still name what it propagates to.
+        ledger = root / "agentic-docs" / "amendments.md"
+        ledger_text = read(ledger)
+        amendments = AMENDMENT_HEAD.findall(text + ledger_text)
+        r.check(bool(amendments), "C6-CONSTITUTION", "no amendment record found")
+        blocks = re.split(r"^### (?=\d+\.\d+\.\d+ — )", text + ledger_text, flags=re.M)[1:]
         for b in blocks:
             ver = b.split(" ", 1)[0]
             if ver.endswith(".0.0") and "Ratified" in b.split("\n")[0]:

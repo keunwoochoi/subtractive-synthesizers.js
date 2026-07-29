@@ -1,6 +1,6 @@
 # PRINCIPLES
 
-**Version 1.1.0** · Ratified 2026-07-28 · Last amended 2026-07-28
+**Version 1.2.0** · Ratified 2026-07-28 · Last amended 2026-07-28
 
 > This is the constitution. `AGENTS.md` routes; this file governs and supersedes other practice.
 > Amendments are dated, quote the owner verbatim, say what the old rule got wrong, and carry a
@@ -66,6 +66,21 @@ license). Hardware recordings are **calibration spot-checks, never convergence t
 scratchpad only, never committed, license verified first. Stated so no future session rebuilds the
 sibling's loop out of habit.
 
+### An exact metric is not a safe metric
+Analytic ground truth protects the formula, never the pipeline. Every comparable automated-search
+system was gamed at the timer, the reference, the comparison, or the aggregation — never at the
+mathematics. So: **the DSP returns a buffer and the harness computes every number**; the harness is
+not editable by the thing it grades; **we grade the worst case over the sweep, never the average**;
+and the cheats are written first and proven to lose. An evaluator that has not been attacked on
+purpose has not been tested.
+
+### Taste never becomes fitness — it becomes the next metric
+A verbal reason from a listening trial is a **specification request**, not a score. Its job is to
+become an analytic metric, at which point it enters the cascade and stops costing listening trials
+forever. Promoting a human-approximating judge to fitness is the documented failure of the
+best-known automated-science system. Listening is the scarcest resource in this project: never spend
+a trial on a candidate that failed an automated gate.
+
 ### A metric delta is not a sound
 Inherited from the sibling's hardest-won lesson: a PR there moved every metric it set out to move
 and was audibly nothing. That binds **harder** here — we have less anchoring, not more. **No change
@@ -117,34 +132,11 @@ may not appear in presets, public API, docs, or marketing. **Describe the sound,
 
 ## Amendments
 
-### 1.1.0 — 2026-07-28 — Authority gate lifted: direct-to-main is permitted
+Current version is in the header above. Full reasoning and Sync Impact Reports:
+[`agentic-docs/amendments.md`](agentic-docs/amendments.md).
 
-**Owner, verbatim:** *"also feel free to make worktrees or not, make PRs or directly merge to main,
-it's fine, commit messaages would have important logs and details anyway."* And: *"if you're ready,
-go go! go autonomously!"*
-
-**What the old rule got wrong.** The gate was inherited from the sibling project, where it protects
-a repo with a live release train, published artifacts, and a public demo. This repo has none of
-those yet: the rule came over as a habit rather than a decision, and in bootstrap it buys nothing
-while costing a PR round-trip per commit. The owner's reasoning identifies what the gate was
-actually protecting — **the durable record, not the branch.** Commit messages carry the full
-reasoning by constitutional requirement, so the review artifact survives whichever branch it lands
-on.
-
-**New rule.** Direct commits and pushes to `main` are permitted during bootstrap. Worktrees and PRs
-are at the agent's discretion. **Every other authority gate is unchanged and remains off** — npm
-publish, GitHub release, paid resources, and public posts still require an explicit per-task lift.
-This amendment is scoped to branch mechanics only.
-
-**This gate returns** when the first release is tagged, and that reinstatement is a `2.0.0`-level
-amendment requiring its own owner decision.
-
-**Sync Impact Report** — artifacts this amendment must propagate to:
-- `AGENTS.md` § Authority gates — **required**, the "never" line must change.
-- `.githooks/pre-commit` — **required**, must not block commits on `main`.
-- `scripts/audit/harness-audit.sh` — **required**, must assert the two documents agree on this gate.
-- `agentic-docs/design/2026-07-28-harness-evidence.md` — not affected.
-
-### 1.0.0 — 2026-07-28 — Ratified
-
-Initial constitution. Owner: *"ok. agree with your judgment."*
+| Version | Date | What changed |
+|---|---|---|
+| 1.2.0 | 2026-07-28 | Evaluator integrity made constitutional — an exact metric is not a safe metric; taste becomes the next metric |
+| 1.1.0 | 2026-07-28 | Direct-to-main permitted during bootstrap (owner decision) |
+| 1.0.0 | 2026-07-28 | Ratified |

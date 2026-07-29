@@ -6,10 +6,12 @@
 
 ## Constitution (the five that change behavior)
 
-### 1. Verify against the specification, not a recording
-Alias energy, filter response vs the analog prototype, cutoff tracking, self-oscillation threshold,
-tuning, stability, headroom, determinism — all have closed-form ground truth and are checked
-automatically. This is why our CI can block on numbers the sibling project could only review by ear.
+### 1. Verify against the specification — but never trust the harness
+Alias energy, filter response vs the analog prototype, tuning, stability, headroom and determinism
+all have closed-form ground truth, so CI can block on numbers the sibling project could only review
+by ear. **An exact metric is not a safe metric:** the DSP returns a buffer and the harness computes
+every number, the harness is not editable by what it grades, gates use the **worst case** over the
+sweep rather than the average, and the cheats are written first and proven to lose.
 
 ### 2. Taste is the product, and it is never automated
 No change to how a patch sounds ships on measurements alone. Blind, order-randomized comparison
