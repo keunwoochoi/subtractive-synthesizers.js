@@ -71,6 +71,7 @@
   </div>
 
   <div class="meta">
+    <div>riff <b id="riff">—</b></div>
     <div>voices <b id="voices">0</b></div>
     <div>sample rate <b id="sr">—</b></div>
     <div><a href="./index.html">open the full patch editor →</a></div>
@@ -80,7 +81,7 @@
 <script type="module">
 import { createEngine } from "../../packages/core/src/index.js";
 import { PRESETS, GROUPS, applyPreset } from "../../packages/core/src/presets.js";
-import { PATTERNS } from "./patterns.js";
+import { PATTERN_FOR, patternFor } from "./patterns.js";
 
 let engine = null, playing = false, current = "acid";
 let step = 0, nextTime = 0, timer = null;
@@ -120,7 +121,7 @@ for (let i = 0; i < 16; i++) {
 }
 
 function drawSteps() {
-  const pat = PATTERNS[PRESETS[current].group].steps;
+  const pat = patternFor(current, PRESETS[current].group).steps;
   stepEls.forEach((el, i) => {
     const s = pat[i];
     el.className = "st" + (s ? (s.a ? " acc" : " hit") : "");
@@ -131,9 +132,11 @@ function selectPatch(key) {
   for (const c of cards.querySelectorAll(".card"))
     c.classList.toggle("on", c.dataset.key === key);
   drawSteps();
+  $("riff").textContent = PATTERN_FOR[key] ?? PRESETS[key].group;
   if (engine) { engine.clear(); applyPreset(engine, key); }
 }
 drawSteps();
+$("riff").textContent = PATTERN_FOR[current] ?? PRESETS[current].group;
 
 $("bpm").oninput = (e) => { $("bpmOut").value = e.target.value; };
 
@@ -142,7 +145,7 @@ $("bpm").oninput = (e) => { $("bpmOut").value = e.target.value; };
 function schedule() {
   const bpm = Number($("bpm").value);
   const stepDur = 60 / bpm / 4;              // 16th notes
-  const pat = PATTERNS[PRESETS[current].group];
+  const pat = patternFor(current, PRESETS[current].group);
   const events = [];
   while (nextTime < engine.context.currentTime + LOOKAHEAD) {
     const s = pat.steps[step % 16];

@@ -88,7 +88,13 @@ try {
     const on = await highlighted();
     if (on.length !== 1) fail(`selecting ${key} left ${on.length} cards highlighted: ${on}`);
     if (on[0] !== key) fail(`selected ${key} but ${on[0]} is highlighted`);
-    // The step grid is keyed off the patch's GROUP, so it must track too.
+    // The riff is chosen PER PATCH now, so the label must follow the selection too --
+    // otherwise a patch could silently fall back to its group's default and nobody
+    // would notice the music stopped matching the sound.
+    const riff = await p.evaluate(() => document.getElementById("riff").textContent);
+    if (!riff || riff === "—") fail(`${key}: no riff named for this patch`);
+
+    // The step grid is keyed off the chosen riff, so it must track too.
     const lit = await p.evaluate(() =>
       [...document.querySelectorAll(".st")].filter((e) => e.classList.contains("hit")
         || e.classList.contains("acc")).length);
