@@ -15,6 +15,7 @@ check we care about is silently dead.
 
 from __future__ import annotations
 
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -61,6 +62,30 @@ class TestAuditFailsCorrectly(unittest.TestCase):
             on_disk - {"good"}, set(MUST_REJECT),
             "fixtures on disk and asserted fixtures disagree",
         )
+
+
+class TestIdentityCheckFailsCorrectly(unittest.TestCase):
+    """The identity check is the one gate whose failure publishes something.
+    It gets the same fail-correctly proof as the file audit."""
+
+    SCRIPT = Path(__file__).resolve().parent / "check-identity.sh"
+
+    def _run(self, expected, actual):
+        return subprocess.run([str(self.SCRIPT), expected, actual],
+                              capture_output=True, text=True)
+
+    def test_matching_identity_passes(self):
+        r = self._run("owner", "owner")
+        self.assertEqual(r.returncode, 0, r.stderr)
+
+    def test_mismatched_identity_is_rejected(self):
+        r = self._run("owner", "some-other-account")
+        self.assertEqual(r.returncode, 1, "a wrong account was accepted")
+        self.assertIn("IDENTITY CHECK FAIL", r.stderr)
+
+    def test_failure_message_names_the_fix(self):
+        r = self._run("owner", "wrong")
+        self.assertIn("gh auth switch -u owner", r.stderr)
 
 
 if __name__ == "__main__":

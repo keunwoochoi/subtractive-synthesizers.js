@@ -7,6 +7,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
+echo "== identity =="
+# First, because a wrong GitHub identity is the one harness failure that publishes
+# something the owner then has to delete. Everything else is recoverable in-repo.
+scripts/audit/check-identity.sh
+
+echo
 echo "== proving the audit can fail =="
 python3 scripts/audit/test_harness_audit.py 2>&1 | tail -3
 

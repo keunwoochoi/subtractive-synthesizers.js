@@ -1,6 +1,6 @@
 # PRINCIPLES
 
-**Version 1.2.0** · Ratified 2026-07-28 · Last amended 2026-07-28
+**Version 1.3.0** · Ratified 2026-07-28 · Last amended 2026-07-28
 
 > This is the constitution. `AGENTS.md` routes; this file governs and supersedes other practice.
 > Amendments are dated, quote the owner verbatim, say what the old rule got wrong, and carry a
@@ -60,11 +60,18 @@ structural difference from the sibling project, and why our CI can block on numb
 review by ear.
 
 ### Reference-corpus convergence is a non-goal
-Rejected, not deferred, on two grounds: we are not trying to *be* any particular synthesizer, and no
-verified CC0/CC-BY corpus of analog multi-samples exists ("royalty-free" is marketing, not a
-license). Hardware recordings are **calibration spot-checks, never convergence targets** —
-scratchpad only, never committed, license verified first. Stated so no future session rebuilds the
-sibling's loop out of habit.
+Rejected on two grounds: we are not trying to *be* any particular synthesizer, and no verified
+CC0/CC-BY corpus of analog multi-samples exists ("royalty-free" is marketing, not a license).
+Hardware recordings are **calibration spot-checks, never convergence targets** — scratchpad only,
+never committed, license verified first. Stated so no future session rebuilds the sibling's loop.
+
+### Publish only as the account that owns the repo
+Every GitHub-side action — issues, comments, reviews, releases — comes from the owning account.
+Tooling keeps one global active identity while pushes authenticate separately, so git history can
+look correct while published activity is attributed to the wrong person. **This is the one harness
+failure that is not recoverable in-repo** — it requires the owner to delete published content. The
+check derives the expected identity from the repo owner and **names no other account: this repo is
+public, and naming one would be the exposure the rule exists to prevent.**
 
 ### An exact metric is not a safe metric
 Analytic ground truth protects the formula, never the pipeline. Every comparable automated-search
@@ -137,6 +144,7 @@ Current version is in the header above. Full reasoning and Sync Impact Reports:
 
 | Version | Date | What changed |
 |---|---|---|
+| 1.3.0 | 2026-07-28 | Publishing identity is constitutional — GitHub actions come from the owning account, enforced |
 | 1.2.0 | 2026-07-28 | Evaluator integrity made constitutional — an exact metric is not a safe metric; taste becomes the next metric |
 | 1.1.0 | 2026-07-28 | Direct-to-main permitted during bootstrap (owner decision) |
 | 1.0.0 | 2026-07-28 | Ratified |
