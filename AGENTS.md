@@ -85,11 +85,14 @@ harness audit counts them; they may not survive into an accepted design doc.
 ## GitHub workflow
 
 ### Identity before anything else
-**Every GitHub-side action must come from the account that owns this repo.** `gh` keeps one global
-active account shared across every repo on the machine, and pushes authenticate separately — so
-`git log` looks correct while issues and comments are posted by the wrong person, with no warning.
-Run `scripts/audit/check-identity.sh` before any `gh` command that writes. If it fails, switch
-accounts; never work around it with the API.
+**Never call `gh` directly. Use `scripts/gh-owner.sh` for every GitHub command.**
+
+`gh`'s active account is a single machine-global setting, contended by any other process on the
+machine — a concurrent agent session in another repo will change it, with no signal here. Observed:
+it reverted twice within minutes. Pushes authenticate separately, so `git log` stays correct while
+issues and comments get posted by the wrong person. **Switching accounts once does not hold.** The
+wrapper switches and acts in one process, and refuses to run if it cannot acquire the owning
+identity.
 
 - Search existing issues and PRs before creating a work item.
 - Every implementation PR adopts an issue. Title `type(scope): imperative summary`.
@@ -118,7 +121,7 @@ must always happen is a hook, a generated artifact, or a failing test. These are
 | Instrument/patch ids have exactly one definition | guard test greps for the literal elsewhere |
 | Always-on context stays inside budget | line/char assertion in the audit |
 | Commit messages carry all five sections | `.githooks/commit-msg` |
-| GitHub actions come from the owning account | `scripts/audit/check-identity.sh`, run first by the audit |
+| GitHub actions come from the owning account | `scripts/gh-owner.sh` (use always); `scripts/audit/check-identity.sh` runs first in the audit |
 | Evidence matches head SHA and a clean tree | required PR check |
 | **The audit itself fails when it should** | `scripts/audit/fixtures/` — deliberately broken inputs the audit must reject |
 

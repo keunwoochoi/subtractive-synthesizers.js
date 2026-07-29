@@ -46,7 +46,21 @@ robust: it cannot go stale, and it works for any owner.
 comments, 0 occurrences of the other account across the repository event feed, sole collaborator is
 the owner, no subscribers. All 5 events (1 create, 4 push) attributed to the owning account.
 
+**The setting is contended, not merely wrong — discovered while fixing it.** The check blocked the
+very commit that introduced it, and then blocked the recreation of the deleted issue: the active
+account had reverted to the other one *twice*, minutes apart. No environment override explains it
+(`GH_TOKEN`, `GITHUB_TOKEN`, `GH_CONFIG_DIR` all unset; no `gh auth` line in any shell profile,
+launch agent, or crontab). `~/.config/gh/hosts.yml` was being rewritten at the start of nearly every
+shell. **12 agent processes were running on the machine at the time**, and the most probable cause is
+a concurrent session working in an unrelated repository switching the machine-global account.
+
+This changes the fix. A one-time switch cannot work against a contended global setting, so
+`scripts/gh-owner.sh` switches and acts **inside a single process** and refuses to run if it cannot
+acquire the owning identity. The race window shrinks from "until someone notices" to milliseconds.
+It is not zero, and that is stated rather than hidden.
+
 **Sync Impact Report** — artifacts this amendment must propagate to:
+- `scripts/gh-owner.sh` — **created**; mandatory for every `gh` invocation.
 - `scripts/audit/check-identity.sh` — **created**, and run first by `harness-audit.sh`.
 - `scripts/audit/test_harness_audit.py` — **required and done**: three tests prove the check rejects
   a mismatch and names the fix, matching the fail-correctly discipline of the file fixtures.

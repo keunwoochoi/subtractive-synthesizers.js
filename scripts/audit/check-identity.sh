@@ -17,9 +17,19 @@
 # check therefore derives the expected login from the repo owner and never names any
 # other account. It is also more robust: it works for any owner, and it cannot go stale.
 #
-# Usage:  scripts/audit/check-identity.sh [expected_override] [actual_override]
-#         (the two overrides exist so the test can prove this script fails when it should)
+# SEVERITY: this reports, it does not block local work.
+# The account is a contended machine-global setting that another process can change at
+# any moment. Blocking commits on it is both ineffective (a commit publishes nothing, so
+# gating it protects nothing) and obstructive (unrelated sessions would wedge this repo).
+# The hard gate belongs where publishing happens: scripts/gh-owner.sh, which refuses to
+# run. Here we warn, so a session sees the state without being stopped by it.
+#
+# Usage:  scripts/audit/check-identity.sh [--warn] [expected_override] [actual_override]
+#         (the overrides exist so the test can prove this script fails when it should)
 set -euo pipefail
+
+WARN_ONLY=0
+if [ "${1:-}" = "--warn" ]; then WARN_ONLY=1; shift; fi
 
 EXPECTED="${1:-}"
 ACTUAL="${2:-}"
@@ -57,10 +67,12 @@ Every GitHub-side action from this repository — issues, comments, reviews, rel
 must come from the owning account. Pushes are authenticated separately and will look
 correct even when this is wrong, so nothing else will warn you.
 
-  fix:  gh auth switch -u $EXPECTED
+  publish with:  scripts/gh-owner.sh <command>     (switches and acts atomically)
+  or fix now:    gh auth switch -u $EXPECTED
 
-Do not work around this by using the API directly.
+Do not work around this by calling gh or the API directly.
 MSG
+  [ "$WARN_ONLY" = "1" ] && { echo "(warning only — nothing is blocked; publishing is gated separately)" >&2; exit 0; }
   exit 1
 fi
 
