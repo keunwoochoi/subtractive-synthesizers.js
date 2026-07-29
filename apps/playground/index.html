@@ -279,7 +279,16 @@ import { createEngine, PARAM } from "../../packages/core/src/index.js";
 import { PRESETS, DEFAULTS, GROUPS } from "../../packages/core/src/presets.js";
 
 const LOW = 48, N_KEYS = 25;
-const KEYMAP = { a:0, w:1, s:2, e:3, d:4, f:5, t:6, g:7, y:8, h:9, u:10, j:11, k:12 };
+// The tracker/DAW layout: white keys along the home row, black keys on the row above.
+// Runs a full octave and a half, C to F, so a two-hand phrase fits without reaching for
+// the octave shift mid-figure.
+//
+//   black   w e     t y u     o p
+//   white  a s d f g h j k l ; '
+const KEYMAP = {
+  a:0,  w:1,  s:2,  e:3,  d:4,  f:5,  t:6,  g:7,  y:8,  h:9,  u:10, j:11,
+  k:12, o:13, l:14, p:15, ";":16, "'":17,
+};
 const BLACK = new Set([1, 3, 6, 8, 10]);
 let engine = null, octave = 0;
 const held = new Set();
