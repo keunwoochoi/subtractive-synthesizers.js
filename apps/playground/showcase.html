@@ -128,7 +128,8 @@ function drawSteps() {
 }
 function selectPatch(key) {
   current = key;
-  for (const c of cards.children) c.classList.toggle("on", c.dataset.key === key);
+  for (const c of cards.querySelectorAll(".card"))
+    c.classList.toggle("on", c.dataset.key === key);
   drawSteps();
   if (engine) { engine.clear(); applyPreset(engine, key); }
 }

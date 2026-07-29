@@ -62,14 +62,32 @@ try {
   if (!state.label.includes("Stop")) fail("transport did not enter playing state");
   if (!/KB/.test(state.size)) fail(`size was not measured: ${state.size}`);
 
-  // Switching patch mid-play must not throw or silence the engine.
-  await p.locator('.card[data-key="warm-pad"]').click();
-  await p.waitForTimeout(900);
-  await p.locator('.card[data-key="acid"]').click();
-  await p.waitForTimeout(600);
+  // Switching patch mid-play must not throw or silence the engine -- AND the UI must
+  // follow. The previous version clicked cards and asserted nothing about the result,
+  // so it passed happily while selection was visibly stuck: the cards had moved inside
+  // per-group rows and the highlight code still walked only direct children.
+  const highlighted = () =>
+    p.evaluate(() => [...document.querySelectorAll(".card.on")].map((e) => e.dataset.key));
+
+  const before = await highlighted();
+  if (before.length !== 1) fail(`expected exactly 1 selected card at load, got ${before}`);
+
+  for (const key of ["warm-pad", "acid", "crystal", "brass-stab"]) {
+    await p.locator(`.card[data-key="${key}"]`).click();
+    await p.waitForTimeout(220);
+    const on = await highlighted();
+    if (on.length !== 1) fail(`selecting ${key} left ${on.length} cards highlighted: ${on}`);
+    if (on[0] !== key) fail(`selected ${key} but ${on[0]} is highlighted`);
+    // The step grid is keyed off the patch's GROUP, so it must track too.
+    const lit = await p.evaluate(() =>
+      [...document.querySelectorAll(".st")].filter((e) => e.classList.contains("hit")
+        || e.classList.contains("acc")).length);
+    if (lit === 0) fail(`${key}: step grid shows no steps for its group`);
+  }
+  await p.waitForTimeout(500);
   await p.click("#play");
 
   if (errs.length) fail("page errors: " + errs.slice(0, 3).join(" | "));
   console.log("showcase:", JSON.stringify({ ...state, peakVoices }));
-  console.log(`SHOWCASE OK — ${expected} patches, transport runs, size measured in-page, patch switching clean`);
+  console.log(`SHOWCASE OK — ${expected} patches, transport runs, size measured in-page, selection + step grid follow every click`);
 } finally { await b.close(); server.kill(); }
