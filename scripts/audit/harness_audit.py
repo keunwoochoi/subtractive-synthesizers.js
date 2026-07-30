@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import subprocess
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -81,8 +82,23 @@ def audit(root: Path) -> Report:
     # READMEs with broken relative links, and target/ is compiler output.
     SKIP = {".git", "fixtures", "node_modules", "target", "dist"}
 
+    # Anything git ignores is a build artifact, and build artifacts are not ours to audit.
+    # The package build stages copies of README.md and the two licences into
+    # packages/core/ so npm actually ships them; the README copy sits one level deeper
+    # than the original, so its relative links resolve from the wrong place and C2-LINKS
+    # failed on a file no human wrote and nobody reads from there. The rule was right and
+    # the input was wrong -- so filter the input rather than weaken the rule.
+    ignored: set[str] = set()
+    try:
+        out = subprocess.run(["git", "ls-files", "--others", "--ignored", "--exclude-standard"],
+                             cwd=root, capture_output=True, text=True, check=False).stdout
+        ignored = {line.strip() for line in out.splitlines() if line.strip()}
+    except OSError:
+        pass
+
     def excluded(p: Path) -> bool:
-        return bool(SKIP & set(p.relative_to(root).parts))
+        rel = p.relative_to(root)
+        return bool(SKIP & set(rel.parts)) or rel.as_posix() in ignored
 
     docs = sorted(p for p in root.rglob("*.md") if not excluded(p))
 

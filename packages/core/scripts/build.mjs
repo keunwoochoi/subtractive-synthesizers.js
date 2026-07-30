@@ -65,4 +65,18 @@ copyFileSync(join(pkg, "src/presets.d.ts"), join(dist, "presets.d.ts"));
 mkdirSync(join(dist, "wasm"), { recursive: true });
 copyFileSync(join(pkg, "wasm/subtractive_dsp.wasm"), join(dist, "wasm/subtractive_dsp.wasm"));
 
-console.log(`built dist/: index.js ${out.length} B (worklet inlined, ${worklet.length} B)`);
+// THE README AND THE LICENCES. `files` in package.json listed all three, and npm
+// silently omits a listed path that does not exist -- so the tarball shipped with no
+// README (a blank page on npm) and, worse, NO LICENCE TEXT AT ALL for a package that
+// claims to be dual MIT/Apache-2.0. install-check.mjs never noticed because it only ever
+// asserted the contents of dist/. Found by scripts/release/check-release-ready.sh.
+//
+// Copied at build time rather than duplicated in the tree: the repo root owns all three,
+// and the copies are gitignored, so there is still exactly one editable original.
+const root = join(pkg, "../..");
+for (const f of ["README.md", "LICENSE-MIT", "LICENSE-APACHE"]) {
+  copyFileSync(join(root, f), join(pkg, f));
+}
+
+console.log(`built dist/: index.js ${out.length} B (worklet inlined, ${worklet.length} B)` +
+            `; README + 2 licences staged for the tarball`);

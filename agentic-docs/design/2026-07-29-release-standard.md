@@ -61,8 +61,12 @@ HTTP requests, since that is a real deployment constraint and not a hypothetical
 Vite, webpack, and Next must work with **no configuration**. `PRINCIPLES` #6: "zero-config
 or it doesn't ship."
 
-**Status: untested. Zero bundler fixtures exist.** An assertion in a README is not a
-result; this needs a fixture per bundler that actually builds and runs.
+**Status: DONE, and it found a real defect.** `scripts/dev/bundler-check.mjs` builds the
+library into a real app per bundler and makes each BUILT bundle produce audio. The first
+webpack run failed outright: `dist/index.js` carried a dead source-tree worklet fallback,
+and webpack resolves `new URL(specifier, import.meta.url)` statically, so an unreachable
+branch still broke the consumer's build. Vite had ignored it entirely — which is the
+argument for three fixtures rather than one representative.
 
 ### C. Browser coverage
 
@@ -94,13 +98,14 @@ No new work required for release. Its job now is to not regress.
 
 ### F. Documentation
 
-**Status: partial.** The README exists and its numbers are generated. Missing: an API
-reference, and a quickstart that is **executed** rather than written — a copy-pasteable
-snippet nobody has run is a bug report waiting.
+**Status: DONE.** `examples/quickstart.js` is the single owner of the snippet: the README
+block is generated from it, and `scripts/verify/check_quickstart.mjs` runs it against the
+packed and installed package on a live `AudioContext`. The API reference is parsed out of
+`index.d.ts`, so a renamed method fails `docs:check` rather than quietly disagreeing.
 
 ### G. Legal
 
-**Status: mostly done, one sweep outstanding.** Dual MIT/Apache-2.0 files present, the
+**Status: done.** Dual MIT/Apache-2.0 files present, the
 licensing ledger records porting and trademark policy, and the patch-design position was
 recorded before the bank was written. Outstanding: an automated sweep proving no protected
 name appears in any of the 36 patch names, labels, or blurbs. The rule exists; nothing
@@ -108,8 +113,20 @@ enforces it.
 
 ### H. Release mechanics
 
-**Status: absent.** No version, no changelog, no tag. `npm publish` stays behind its
-authority gate and is not lifted by this document.
+**Status: mechanics DONE; the release itself deliberately NOT taken.** `CHANGELOG.md`
+exists in Keep a Changelog form, and `scripts/release/check-release-ready.sh` answers
+"could this ship right now?" with evidence — version/changelog agreement, clean tree, CI
+green at HEAD, publishing identity, the exact tarball contents, and every gate — then
+PRINTS the publish steps instead of running them.
+
+It immediately earned its place: the tarball contained **no README and no licence files
+at all**, for a package that claims to be dual MIT/Apache-2.0. `files` listed all three,
+they lived at the repo root, and npm silently omits a listed path that does not exist.
+`install-check.mjs` had never noticed because it only inspected `dist/`.
+
+Owner, 2026-07-29: *"we don't release it yet. We just prepare to release."* `npm publish`
+and GitHub releases remain behind their authority gate; the version stays `0.1.0-draft.0`
+and no tag exists.
 
 ## Order of work
 
@@ -129,6 +146,12 @@ Named so the scope cannot creep during the work: MIDI file playback, Web MIDI in
 React wrapper, presets serialisation or a user patch format, offline bounce as a public
 API, the SVF's band/high outputs as separate patch-level routings, mobile performance
 tiers, and the `@instrumentsjs/engine` extraction shared with the sibling project.
+
+## The taste gate, which is the one that mattered
+
+Owner, 2026-07-29, having played the bank: *"i checked out the patches. actually they
+sound good."* That is the sign-off area E structurally cannot produce, and it is recorded
+here because it is the only place it exists.
 
 ## The honest limit on any release claim
 

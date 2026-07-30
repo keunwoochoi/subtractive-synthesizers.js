@@ -26,7 +26,8 @@
     "check:install": "node scripts/dev/install-check.mjs",
     "check:audio": "node scripts/dev/playground-audio-check.mjs",
     "check:bundlers": "node scripts/dev/bundler-check.mjs",
-    "check:quickstart": "node scripts/verify/check_quickstart.mjs"
+    "check:quickstart": "node scripts/verify/check_quickstart.mjs",
+    "check:release": "scripts/release/check-release-ready.sh"
   },
   "devDependencies": {
     "playwright": "^1.62.0"

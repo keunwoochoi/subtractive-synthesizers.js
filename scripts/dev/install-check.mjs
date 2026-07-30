@@ -39,6 +39,14 @@ console.log("shipped dist/:", shipped.join(", "));
 for (const need of ["index.js", "index.d.ts", "presets.js", "presets.d.ts", "wasm"]) {
   if (!shipped.includes(need)) fail(`dist/${need} was not published (check "files")`);
 }
+// The package ROOT, not just dist/. "files" listed README.md and both licences, and npm
+// silently omits a listed path that does not exist -- they lived at the repo root, so the
+// published package had a blank page on npm and NO LICENCE TEXT for something that claims
+// to be dual MIT/Apache-2.0. This check only looked inside dist/, so it never saw it.
+const rootFiles = readdirSync(installed);
+for (const need of ["README.md", "LICENSE-MIT", "LICENSE-APACHE"]) {
+  if (!rootFiles.includes(need)) fail(`${need} was not published (check "files")`);
+}
 
 // The three lines from the README, run for real against the installed package.
 writeFileSync(join(work, "index.html"), `<!doctype html><meta charset="utf-8"><body>
