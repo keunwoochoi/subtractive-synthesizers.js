@@ -10,12 +10,18 @@ AudioWorklet; the package contains no audio samples and makes no network request
 > **Status: pre-alpha**, not yet published to npm. Currently implemented: an
 > antialiased oscillator, a zero-delay-feedback ladder filter with per-voice
 > analog drift, and 16-voice polyphony, in one AudioWorklet.
->
-> ```sh
-> cargo build -p subtractive-dsp --target wasm32-unknown-unknown --release
-> scripts/dev/serve.sh start   # → http://127.0.0.1:8291/apps/playground/showcase.html
-> scripts/dev/serve.sh stop    # when you're done
-> ```
+
+## Demo
+
+- **<https://keunwoochoi.github.io/subtractive-synthesizers.js/apps/playground/showcase.html>** — showcase: plays the patch bank
+- **<https://keunwoochoi.github.io/subtractive-synthesizers.js/apps/playground/index.html>** — playground: parameter panel and keyboard
+
+Served by GitHub Pages from `main`. To run locally instead:
+
+```sh
+cargo build -p subtractive-dsp --target wasm32-unknown-unknown --release
+scripts/dev/serve.sh start   # same pages at http://127.0.0.1:8291/, stop with serve.sh stop
+```
 
 <!-- generated:quickstart -->
 ```js
