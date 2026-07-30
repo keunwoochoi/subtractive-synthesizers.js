@@ -24,7 +24,8 @@
     "match:loudness": "python3 scripts/dev/match_loudness.py",
     "build": "cd packages/core && node scripts/build.mjs",
     "check:install": "node scripts/dev/install-check.mjs",
-    "check:audio": "node scripts/dev/playground-audio-check.mjs"
+    "check:audio": "node scripts/dev/playground-audio-check.mjs",
+    "check:bundlers": "node scripts/dev/bundler-check.mjs"
   },
   "devDependencies": {
     "playwright": "^1.62.0"

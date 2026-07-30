@@ -65,6 +65,7 @@ export async function createEngine({ wasmUrl, workletUrl, context, initialEvents
       revoke = () => URL.revokeObjectURL(moduleUrl);
     } else {
       // Source-tree fallback: no build has run, so fetch the worklet from its own file.
+      // STRIPPED BY THE BUILD -- see scripts/build.mjs. It must not reach the tarball.
       moduleUrl = new URL("../worklet/processor.js", import.meta.url);
     }
   }

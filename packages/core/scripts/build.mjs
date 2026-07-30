@@ -24,12 +24,37 @@ const worklet = readFileSync(join(pkg, "worklet/processor.js"), "utf8");
 const src = readFileSync(join(pkg, "src/index.js"), "utf8");
 
 // JSON.stringify gives a correctly escaped JS string literal for arbitrary source.
-const out = src.replace(
+let out = src.replace(
   "/* __WORKLET_SOURCE__ */ null",
   JSON.stringify(worklet),
 );
 if (out === src) {
   console.error("build: worklet placeholder not found in src/index.js");
+  process.exit(1);
+}
+
+// STRIP THE SOURCE-TREE FALLBACK. It exists so apps/playground can run straight from
+// src/ with no build, and it is unreachable once the worklet is inlined above -- but
+// UNREACHABLE IS NOT ENOUGH. webpack resolves `new URL(specifier, import.meta.url)`
+// statically, at build time, without caring whether the branch can execute. It looked
+// for ../worklet/processor.js relative to dist/, which the tarball does not contain, and
+// failed the consumer's build outright. Vite happily ignored it, so this was invisible
+// until there was a webpack fixture. Found by scripts/dev/bundler-check.mjs.
+const FALLBACK = `    } else {
+      // Source-tree fallback: no build has run, so fetch the worklet from its own file.
+      // STRIPPED BY THE BUILD -- see scripts/build.mjs. It must not reach the tarball.
+      moduleUrl = new URL("../worklet/processor.js", import.meta.url);
+    }`;
+if (!out.includes(FALLBACK)) {
+  console.error("build: the source-tree worklet fallback moved — update scripts/build.mjs");
+  process.exit(1);
+}
+out = out.replace(FALLBACK, `    } else {
+      // Unreachable: the worklet is inlined above in the published package.
+      throw new Error("subtractive-synthesizers.js: worklet source missing from build");
+    }`);
+if (out.includes("worklet/processor.js")) {
+  console.error("build: dist/index.js still references the worklet by path");
   process.exit(1);
 }
 

@@ -39,9 +39,9 @@ and that difference decides how the whole project verifies its work.
 | artifact | raw | gzipped |
 |---|---:|---:|
 | `packages/core/wasm/subtractive_dsp.wasm` | 76,064 B | 30,122 B |
-| `packages/core/src/index.js` | 5,090 B | 2,423 B |
+| `packages/core/src/index.js` | 5,178 B | 2,474 B |
 | `packages/core/worklet/processor.js` | 4,977 B | 1,991 B |
-| **total** | | **34,536 B (33.7 KB)** |
+| **total** | | **34,587 B (33.8 KB)** |
 
 Budget is 60 KB gzipped for the whole library — currently **56%**.
 <!-- /generated:bundle -->
@@ -52,8 +52,8 @@ Budget is 60 KB gzipped for the whole library — currently **56%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **12.4 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 8.1x |
+| audio-thread budget used | **11.6 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 8.6x |
 <!-- /generated:bench -->
 
 Measured on the machine that regenerated this table, with the voice pool saturated and
