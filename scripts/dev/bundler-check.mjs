@@ -38,6 +38,11 @@ const want = process.argv.slice(2).filter((a) => !a.startsWith("-"));
 const names = want.length ? want : Object.keys(BUNDLERS);
 for (const n of names) if (!BUNDLERS[n]) { console.error(`unknown bundler ${n}`); process.exit(2); }
 
+// fail() calls process.exit, which SKIPS `finally` -- so every failure used to leak the
+// http.server, and a leaked server holds the port and serves the PREVIOUS run's build to
+// the next one. check_quickstart.mjs was caught reporting a stale result that way.
+const cleanup = [];
+process.on("exit", () => { for (const fn of cleanup) { try { fn(); } catch {} } });
 const fail = (m) => { console.error("BUNDLER FAIL: " + m); process.exit(1); };
 
 console.log("packing the library…");
@@ -74,10 +79,25 @@ try {
 
     // Serve the BUILT output. Serving the dev server instead would skip exactly the
     // asset-emission step that breaks WASM URLs.
+    // A nonce only this run can serve, so a stale server squatting on the port is
+    // detected rather than silently measured as if it were our build.
+    const nonce = `${process.pid}-${name}-${process.hrtime.bigint()}`;
+    writeFileSync(join(site, "nonce.txt"), nonce);
+
     const server = spawn("python3", ["-m", "http.server", String(cfg.port), "--bind", "127.0.0.1"],
                          { cwd: site, stdio: "ignore" });
+    cleanup.push(() => server.kill());
     await new Promise((r) => setTimeout(r, 800));
+    {
+      const res = await fetch(`http://127.0.0.1:${cfg.port}/nonce.txt`).catch(() => null);
+      const got = res && res.ok ? (await res.text()).trim() : null;
+      if (got !== nonce) {
+        fail(`something else is already serving port ${cfg.port} — its files, not the ` +
+             `${name} build, would have been measured. Kill it:  lsof -ti :${cfg.port} | xargs kill`);
+      }
+    }
     const browser = await pw.chromium.launch({ args: ["--autoplay-policy=no-user-gesture-required"] });
+    cleanup.push(() => browser.close());
     try {
       const page = await browser.newPage();
       const errs = [];

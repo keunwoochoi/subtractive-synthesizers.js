@@ -13,6 +13,7 @@ No samples, no CDN, works offline. `noteOn()` and you have a sound.
 > scripts/dev/serve.sh stop    # when you're done
 > ```
 
+<!-- generated:quickstart -->
 ```js
 import { createEngine } from "subtractive-synthesizers.js";
 import { applyPreset } from "subtractive-synthesizers.js/presets";
@@ -21,17 +22,53 @@ const engine = await createEngine();   // resolves its own WASM and worklet
 applyPreset(engine, "supersaw");
 engine.noteOn(60, 0.9);
 ```
+<!-- /generated:quickstart -->
 
 No bundler configuration, no files to copy. The worklet is inlined and served from a Blob
 URL, and the WASM resolves through `new URL(..., import.meta.url)`, which Vite, webpack 5
 and Rollup all understand. `scripts/dev/install-check.mjs` packs the package, installs it
 into a clean project and makes a sound from it — because every other check in this repo
-runs against the source tree, where the paths happen to line up.
+runs against the source tree, where the paths happen to line up. The snippet above is not
+written here: it is generated from `examples/quickstart.js`, which
+`scripts/verify/check_quickstart.mjs` runs against the installed package on every CI
+build. And `scripts/dev/bundler-check.mjs` builds the library into real Vite, webpack and
+Next apps, because "no bundler configuration" is a claim three bundlers get to judge.
 
 Second library in the `sets-of-instruments-js` family.
 [`physical-instruments.js`](https://github.com/keunwoochoi/physical-instruments.js) models
 instruments that exist. **This one ships synthesizers, whose output imitates nothing** —
 and that difference decides how the whole project verifies its work.
+
+## API
+
+<!-- generated:api -->
+**`createEngine(options?)` → `Promise<Engine>`**
+
+| option | meaning |
+|---|---|
+| `wasmUrl?: string \| URL` | Override where the WASM is fetched from. Defaults to the packaged asset. |
+| `workletUrl?: string \| URL` | Override the worklet module URL. Defaults to inlined source via a Blob URL. |
+| `context?: BaseAudioContext` | Supply your own context — required for an OfflineAudioContext render. |
+| `initialEvents?: ScheduledEvent[]` | Events applied at node construction. Required for offline rendering: an OfflineAudioContext can finish rendering without ever servicing the message port. |
+
+**`Engine`**
+
+| member | meaning |
+|---|---|
+| `readonly context: BaseAudioContext` | The context the engine was created on — yours, or one it made. |
+| `readonly node: AudioWorkletNode` | The engine's output node, already connected to the destination. Tap it for meters or your own effects chain. |
+| `readonly voices: number` | Voices currently sounding. Updated ~10 times a second. |
+| `onStats?: (stats: { voices: number }) => void` | Called with engine stats as they arrive. |
+| `resume(): Promise<void>` | Resume a context the browser suspended. Safe to call from any user gesture. |
+| `noteOn(note: number, vel?: number): void` | Start a note now. `note` is MIDI (60 = middle C), `vel` is 0..1. |
+| `noteOff(note: number): void` | Release a note now; its amp release still rings out. |
+| `allOff(): void` | Release every sounding note, tails intact. |
+| `schedule(events: ScheduledEvent[]): void` | Queue events at absolute context times; applied on the exact frame. |
+| `clear(): void` | Drop everything pending and silence. |
+| `setParam(name: ParamName, value: number): void` | Set one patch parameter, effective on the next block. |
+
+`PARAM` names 47 patch parameters, `SHAPE` the 3 waveforms and `FILTER` the 6 filter types. The authoritative list is [`index.d.ts`](packages/core/src/index.d.ts), which this table is generated from.
+<!-- /generated:api -->
 
 ## Size
 
@@ -52,8 +89,8 @@ Budget is 60 KB gzipped for the whole library — currently **56%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **11.6 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 8.6x |
+| audio-thread budget used | **12.2 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 8.2x |
 <!-- /generated:bench -->
 
 Measured on the machine that regenerated this table, with the voice pool saturated and
@@ -138,7 +175,7 @@ which is the only thing that lets the work finish.
 <!-- generated:harness-stats -->
 | | |
 |---|---|
-| harness audit assertions | 24 |
+| harness audit assertions | 25 |
 | fail-correctly tests | 18 |
 | deliberately-broken fixtures | 8 |
 <!-- /generated:harness-stats -->

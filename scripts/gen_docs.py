@@ -185,7 +185,76 @@ def gen_bench() -> str:
 # everywhere, and a difference is a real failure.
 VOLATILE = {"bench"}
 
+def gen_quickstart() -> str:
+    """The quickstart snippet, taken from the file that is actually EXECUTED.
+
+    A copy-pasteable snippet nobody has run is a bug report waiting, and one that lives
+    only in a README drifts the first time the API moves. examples/quickstart.js is run
+    against the PACKED, INSTALLED package by scripts/verify/check_quickstart.mjs; this
+    embeds that same file, cut at the harness marker so the reader sees only the part
+    that is the quickstart.
+    """
+    src = (ROOT / "examples/quickstart.js").read_text(encoding="utf-8")
+    marker = "// --8<--"
+    if marker not in src:
+        raise SystemExit("examples/quickstart.js lost its --8<-- marker")
+    snippet = src.split(marker)[0].rstrip()
+    return f"```js\n{snippet}\n```\n"
+
+
+def _members(dts: str, block: str) -> list[tuple[str, str]]:
+    """(signature, doc) for each member of an interface, in declaration order.
+
+    Parsed out of index.d.ts rather than written by hand: a reference table that is
+    maintained alongside the types is a reference table that disagrees with them within
+    a release. This one cannot -- if a method is renamed and this block is not
+    regenerated, `npm run docs:check` fails.
+    """
+    body = dts.split(f"interface {block} {{", 1)[1]
+    depth, out, doc = 1, [], []
+    for raw in body.splitlines():
+        line = raw.strip()
+        depth += line.count("{") - line.count("}")
+        if depth <= 0:
+            break
+        if line.startswith("/**"):
+            doc = [line.removeprefix("/**").removesuffix("*/").strip()]
+        elif line.startswith("*/"):
+            pass
+        elif line.startswith("*"):
+            doc.append(line.lstrip("* ").removesuffix("*/").strip())
+        elif line and not line.startswith("//"):
+            out.append((line.rstrip(";"), " ".join(d for d in doc if d).strip()))
+            doc = []
+    return out
+
+
+def _pipe(text: str) -> str:
+    """Escape `|` so a union type does not silently split a markdown table cell."""
+    return text.replace("|", "\\|")
+
+
+def gen_api() -> str:
+    dts = (ROOT / "packages/core/src/index.d.ts").read_text(encoding="utf-8")
+    rows = ["**`createEngine(options?)` → `Promise<Engine>`**", "",
+            "| option | meaning |", "|---|---|"]
+    for sig, doc in _members(dts, "CreateEngineOptions"):
+        rows.append(f"| `{_pipe(sig)}` | {doc or '—'} |")
+    rows += ["", "**`Engine`**", "", "| member | meaning |", "|---|---|"]
+    for sig, doc in _members(dts, "Engine"):
+        rows.append(f"| `{_pipe(sig)}` | {doc or '—'} |")
+
+    n_params = dts.count('"', dts.index("export type ParamName"), dts.index("export declare const PARAM")) // 2
+    rows += ["",
+             f"`PARAM` names {n_params} patch parameters, `SHAPE` the 3 waveforms and "
+             f"`FILTER` the 6 filter types. The authoritative list is "
+             "[`index.d.ts`](packages/core/src/index.d.ts), which this table is generated from."]
+    return "\n".join(rows) + "\n"
+
+
 GENERATORS = {
+    "api": gen_api,
+    "quickstart": gen_quickstart,
     "bench": gen_bench,
     "bundle": gen_bundle,
     "bundle-total": gen_bundle_total,

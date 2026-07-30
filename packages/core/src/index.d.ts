@@ -39,20 +39,27 @@ export interface ScheduledEvent {
 }
 
 export interface Engine {
+  /** The context the engine was created on — yours, or one it made. */
   readonly context: BaseAudioContext;
+  /** The engine's output node, already connected to the destination. Tap it for meters or your own effects chain. */
   readonly node: AudioWorkletNode;
   /** Voices currently sounding. Updated ~10 times a second. */
   readonly voices: number;
   /** Called with engine stats as they arrive. */
   onStats?: (stats: { voices: number }) => void;
+  /** Resume a context the browser suspended. Safe to call from any user gesture. */
   resume(): Promise<void>;
+  /** Start a note now. `note` is MIDI (60 = middle C), `vel` is 0..1. */
   noteOn(note: number, vel?: number): void;
+  /** Release a note now; its amp release still rings out. */
   noteOff(note: number): void;
+  /** Release every sounding note, tails intact. */
   allOff(): void;
   /** Queue events at absolute context times; applied on the exact frame. */
   schedule(events: ScheduledEvent[]): void;
   /** Drop everything pending and silence. */
   clear(): void;
+  /** Set one patch parameter, effective on the next block. */
   setParam(name: ParamName, value: number): void;
 }
 

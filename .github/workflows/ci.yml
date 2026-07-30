@@ -67,6 +67,9 @@ jobs:
       - run: BROWSER=webkit node scripts/dev/showcase-check.mjs
       # The release gate: pack, install clean, and make a sound from the PUBLISHED files.
       - run: node scripts/dev/install-check.mjs
+      # The README's quickstart, run verbatim against the installed package on a LIVE
+      # context. A snippet nobody has executed is a bug report waiting.
+      - run: node scripts/verify/check_quickstart.mjs
 
   bundlers:
     # Separate job: it installs three real bundlers from the registry, so it is the
