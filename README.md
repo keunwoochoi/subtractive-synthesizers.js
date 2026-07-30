@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo/logo-256.png" width="140" alt="subtractive-synthesizers.js — [-] tile-mosaic logo">
+</p>
+
 # subtractive-synthesizers.js
 
 **A real analog-style synthesizer for the browser, computed on the fly.**
