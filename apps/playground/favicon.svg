@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- family recipe (shared with physical-instruments.js): same dark plate,
+       one bracketed glyph per synth family, one metallic finish per family.
+       subtractive = [-] in brushed steel blue -->
+  <defs>
+    <linearGradient id="steel" gradientUnits="userSpaceOnUse" x1="0" y1="12" x2="0" y2="52">
+      <stop offset="0" stop-color="#dcecfa"/>
+      <stop offset=".45" stop-color="#8fb6d6"/>
+      <stop offset=".78" stop-color="#527ba3"/>
+      <stop offset="1" stop-color="#9cc0dd"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="#12151c"/>
+  <g stroke="url(#steel)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 15 H15 V49 H22" stroke-width="5.5"/>
+    <path d="M42 15 H49 V49 H42" stroke-width="5.5"/>
+    <path d="M25 32 H39" stroke-width="6.5"/>
+  </g>
+</svg>
