@@ -91,10 +91,26 @@ def main():
     for j in range(GRID):
         for i in range(GRID):
             cx, cy = (i + 0.5) * pitch, (j + 0.5) * pitch
-            c = sample(px, cx, cy, win)
+            # The [-] glyph is mirror-symmetric both ways, but raster
+            # antialiasing plus rounding flips threshold tiles differently on
+            # each side. Average each sample with its horizontal mirror (the
+            # steel gradient only varies vertically, so tones are unaffected),
+            # and decide glyph membership from the vertical mirror too so the
+            # tile pattern is symmetric while tone still follows the row.
+            c1 = sample(px, cx, cy, win)
+            c2 = sample(px, 64.0 - cx, cy, win)
+            c = tuple((a + b) // 2 for a, b in zip(c1, c2))
             if c[3] < 150:
                 continue  # outside the rounded plate corners
-            r, g, b = snap(c)
+            v1 = sample(px, cx, 64.0 - cy, win)
+            v2 = sample(px, 64.0 - cx, 64.0 - cy, win)
+            cv = tuple((a + b) // 2 for a, b in zip(v1, v2))
+            both = tuple((a + b) // 2 for a, b in zip(c, cv))
+            if snap(both) == PLATE_TILE:
+                r, g, b = PLATE_TILE
+            else:
+                glyph = snap(c)
+                r, g, b = glyph if glyph != PLATE_TILE else snap(cv)
             parts.append(
                 f'<rect x="{cx - side / 2:.2f}" y="{cy - side / 2:.2f}" '
                 f'width="{side:.2f}" height="{side:.2f}" rx="{side * CORNER_FRAC:.2f}" '
