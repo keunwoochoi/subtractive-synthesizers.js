@@ -4,12 +4,12 @@
 
 # subtractive-synthesizers.js
 
-**A real analog-style synthesizer for the browser, computed on the fly.**
-No samples, no CDN, works offline. `noteOn()` and you have a sound.
+A subtractive synthesizer for the browser. All sound is computed at runtime in an
+AudioWorklet; the package contains no audio samples and makes no network requests.
 
-> **Status: pre-alpha.** Nothing on npm yet. But the engine is real and playable: an
-> antialiased oscillator through a zero-delay-feedback ladder filter with per-voice
-> analog drift, 16-voice polyphony, inside one AudioWorklet.
+> **Status: pre-alpha**, not yet published to npm. Currently implemented: an
+> antialiased oscillator, a zero-delay-feedback ladder filter with per-voice
+> analog drift, and 16-voice polyphony, in one AudioWorklet.
 >
 > ```sh
 > cargo build -p subtractive-dsp --target wasm32-unknown-unknown --release
@@ -28,20 +28,21 @@ engine.noteOn(60, 0.9);
 ```
 <!-- /generated:quickstart -->
 
-No bundler configuration, no files to copy. The worklet is inlined and served from a Blob
-URL, and the WASM resolves through `new URL(..., import.meta.url)`, which Vite, webpack 5
-and Rollup all understand. `scripts/dev/install-check.mjs` packs the package, installs it
-into a clean project and makes a sound from it — because every other check in this repo
-runs against the source tree, where the paths happen to line up. The snippet above is not
-written here: it is generated from `examples/quickstart.js`, which
-`scripts/verify/check_quickstart.mjs` runs against the installed package on every CI
-build. And `scripts/dev/bundler-check.mjs` builds the library into real Vite, webpack and
-Next apps, because "no bundler configuration" is a claim three bundlers get to judge.
+The worklet is inlined and served from a Blob URL, and the WASM resolves through
+`new URL(..., import.meta.url)`, so Vite, webpack 5 and Rollup handle the package
+without configuration. Three checks back this up: `scripts/dev/install-check.mjs`
+packs the package, installs it into a clean project and renders sound from it
+(every other check runs against the source tree, where paths line up regardless);
+the snippet above is generated from `examples/quickstart.js`, which
+`scripts/verify/check_quickstart.mjs` runs against the installed package on every
+CI build; and `scripts/dev/bundler-check.mjs` builds the library inside Vite,
+webpack and Next apps.
 
 Second library in the `sets-of-instruments-js` family.
 [`physical-instruments.js`](https://github.com/keunwoochoi/physical-instruments.js) models
-instruments that exist. **This one ships synthesizers, whose output imitates nothing** —
-and that difference decides how the whole project verifies its work.
+acoustic instruments and is evaluated against recordings of them. A subtractive
+synthesizer has no acoustic reference, so this repository verifies against
+closed-form specifications instead — see [Verification](#verification).
 
 ## API
 
@@ -98,20 +99,17 @@ Budget is 60 KB gzipped for the whole library — currently **56%**.
 <!-- /generated:bench -->
 
 Measured on the machine that regenerated this table, with the voice pool saturated and
-the chorus on — the worst case this build can produce. **Not a claim about any other
-device, and explicitly not a mobile figure**: estimated mobile numbers are never
-presented as budget rows here.
+the chorus on — the worst case this build can produce. Figures for other devices,
+including mobile, are not claimed.
 
-## How it verifies itself
+## Verification
 
-A sawtooth through a resonant lowpass is not an imitation of anything, so there is no
-recording we are failing to match. **We do not need a reference recording, because we
-have a reference equation.** An ideal sawtooth has harmonics at *k·f₀* with amplitude
-∝ 1/*k*; a ladder filter is a discretization of a known transfer function. Those have
-exact answers that need no corpus, no microphone, and no licence.
+An ideal sawtooth has harmonics at *k·f₀* with amplitude ∝ 1/*k*; a ladder filter is a
+discretization of a known transfer function. Both have closed-form specifications, so
+oscillators are graded analytically rather than against reference recordings.
 
 Every oscillator is graded against that prototype, worst-case across a grid, on a
-**hidden** set of frequencies and sample rates it was never tuned against:
+hidden set of frequencies and sample rates it was never tuned against:
 
 <!-- generated:verdicts -->
 | candidate | alias dB | harmonic err | verdict |
@@ -126,17 +124,16 @@ Every oscillator is graded against that prototype, worst-case across a grid, on 
 | `cheat_special_cased` | -11.5 | 0.8 | REJECT (passed visible) |
 <!-- /generated:verdicts -->
 
-`wasm_saw` is the shipped artifact. Everything else is scaffolding — including four
-cheats written *before* any DSP existed, because every gate has a degenerate optimum and
-the only way to know a gate measures what you meant is to build the thing that games it
-and watch it lose.
+`wasm_saw` is the shipped artifact. The rest is scaffolding, including four cheats
+written before any DSP existed: every gate has a degenerate optimum, and asserting that
+the gate rejects a candidate built to game it is the check that the gate measures what
+was intended.
 
-Note `cheat_pure_sine`: it has **the best alias suppression of any candidate**, better
-than the real implementation. A gate on alias energy alone would rank it first. It is
-caught only by harmonic structure — which is why the two metrics are paired.
-
-And `cheat_special_cased` — correct on the published grid, naive everywhere else —
-passes the visible grid outright and is caught only by the hidden one.
+Two of them justify the design. `cheat_pure_sine` has the best alias suppression of any
+candidate — a gate on alias energy alone would rank it first; it is caught only by
+harmonic structure, which is why the two metrics are paired. `cheat_special_cased` is
+correct on the published grid and naive everywhere else; it passes the visible grid
+outright and is caught only by the hidden one.
 
 ### Measured alias suppression
 
@@ -152,16 +149,15 @@ passes the visible grid outright and is caught only by the hidden one.
 | 2200 | -12.4 dB | -27.0 dB | +14.7 dB |
 <!-- /generated:alias-table -->
 
-PolyBLEP buys a consistent ~16 dB over a raw phase ramp, and degrades with pitch. That
-degradation is a known limit, recorded rather than hidden: the upper register needs
-oversampling before the gate can be tightened.
+PolyBLEP gives a consistent ~16 dB over a raw phase ramp and degrades with pitch. This
+is a known limit: the upper register needs oversampling before the gate can be
+tightened.
 
 ## Patches
 
-Every patch's **intent is written before any parameter is tuned** — prose plus 3–5
-measurable targets, each naming the phrase of prose it derives from. With no reference
-to converge on, an intent written first is the only thing that lets a result be *wrong*,
-which is the only thing that lets the work finish.
+Every patch has an intent statement written before any parameter is tuned: prose plus
+3–5 measurable targets, each naming the phrase of prose it derives from. With no
+external reference to converge on, the prior intent is what defines a result as wrong.
 
 <!-- generated:roster -->
 | group | patches |
@@ -184,10 +180,10 @@ which is the only thing that lets the work finish.
 | deliberately-broken fixtures | 8 |
 <!-- /generated:harness-stats -->
 
-Rules here are hooks, generated artifacts, or failing tests — never prose. Including the
-rule that **the harness must be shown to fail**: deliberately broken fixtures that every
-gate is asserted to reject. That discipline found a dead check within minutes of being
-written.
+Rules here are enforced as hooks, generated artifacts, or failing tests rather than
+prose. That includes the requirement that the harness itself be shown to fail:
+deliberately broken fixtures that every gate is asserted to reject. This caught one
+dead check when it was first introduced.
 
 - `PRINCIPLES.md` — the constitution
 - `AGENTS.md` — operating rules and routing
