@@ -25,6 +25,7 @@ CORNER_FRAC = 0.26   # tile corner radius as a fraction of tile side
 PLATE = (18, 21, 28)         # favicon plate #12151c
 PLATE_TILE = (34, 40, 54)    # lifted so the tile texture reads against grout
 GROUT = "#0b0d11"
+FIT_SCALE = 1.2      # enlarge the mark about plate center; see comment in main()
 
 
 def snap(c):
@@ -92,25 +93,32 @@ def main():
         for i in range(GRID):
             cx, cy = (i + 0.5) * pitch, (j + 0.5) * pitch
             # The [-] glyph is mirror-symmetric both ways, but raster
-            # antialiasing plus rounding flips threshold tiles differently on
-            # each side. Average each sample with its horizontal mirror (the
-            # steel gradient only varies vertically, so tones are unaffected),
-            # and decide glyph membership from the vertical mirror too so the
-            # tile pattern is symmetric while tone still follows the row.
-            c1 = sample(px, cx, cy, win)
-            c2 = sample(px, 64.0 - cx, cy, win)
-            c = tuple((a + b) // 2 for a, b in zip(c1, c2))
-            if c[3] < 150:
+            # antialiasing, rounding, and the fit transform all flip
+            # threshold tiles differently on each side. Rather than hoping
+            # mirrored samples agree, compute everything from the canonical
+            # quadrant (i, j folded into the top-left) so symmetry holds by
+            # construction: presence and membership are quadrant-decided;
+            # tone re-samples at the tile's own row so the vertical steel
+            # gradient still reads.
+            ci, cj = min(i, GRID - 1 - i), min(j, GRID - 1 - j)
+            qx, qy = (ci + 0.5) * pitch, (cj + 0.5) * pitch
+            if sample(px, qx, qy, win)[3] < 150:
                 continue  # outside the rounded plate corners
-            v1 = sample(px, cx, 64.0 - cy, win)
-            v2 = sample(px, 64.0 - cx, 64.0 - cy, win)
-            cv = tuple((a + b) // 2 for a, b in zip(v1, v2))
-            both = tuple((a + b) // 2 for a, b in zip(c, cv))
-            if snap(both) == PLATE_TILE:
+            # The favicon composes [-] for a tiny square with generous air;
+            # at logo size that reads as wasted margin, so color samples look
+            # at the favicon enlarged FIT_SCALE-x about the plate center
+            # (~4 tiles of margin down to ~3). Presence above still follows
+            # the unzoomed alpha, so the plate silhouette is unchanged.
+            fx = 32.0 + (qx - 32.0) / FIT_SCALE
+            fyq = 32.0 + (qy - 32.0) / FIT_SCALE
+            fy = 32.0 + ((j + 0.5) * pitch - 32.0) / FIT_SCALE
+            cq = sample(px, fx, fyq, win)      # canonical quadrant: membership
+            crow = sample(px, fx, fy, win)     # same column, own row: tone
+            if snap(cq) == PLATE_TILE:
                 r, g, b = PLATE_TILE
             else:
-                glyph = snap(c)
-                r, g, b = glyph if glyph != PLATE_TILE else snap(cv)
+                glyph = snap(crow)
+                r, g, b = glyph if glyph != PLATE_TILE else snap(cq)
             parts.append(
                 f'<rect x="{cx - side / 2:.2f}" y="{cy - side / 2:.2f}" '
                 f'width="{side:.2f}" height="{side:.2f}" rx="{side * CORNER_FRAC:.2f}" '
