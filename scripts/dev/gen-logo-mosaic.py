@@ -27,6 +27,26 @@ PLATE = (18, 21, 28)         # favicon plate #12151c
 PLATE_TILE = (34, 40, 54)    # lifted so the tile texture reads against grout
 GROUT = "#0b0d11"
 FIT_SCALE = 1.2      # enlarge the mark about plate center; see comment in main()
+PLATE_RX = 15.0      # plate corner radius, favicon units (matches favicon and grout rect)
+
+
+def cell_on_plate(i, j, pitch):
+    """Whole grid cell inside the rounded plate — not just the cell center.
+
+    Presence by center-alpha alone lets a tile straddle the plate's corner
+    arc: the center clears the alpha threshold while the tile's outer half
+    pokes past the curve, leaving stray nubs outside the silhouette. Tiles
+    are drawn unclipped, so the cell must fit entirely inside the rx-15
+    rounded rect; testing the cell (not the smaller tile) keeps the
+    full-bleed favicon pixels inside their rounded plate too.
+    """
+    x0, y0 = i * pitch, j * pitch
+    for x, y in ((x0, y0), (x0 + pitch, y0), (x0, y0 + pitch), (x0 + pitch, y0 + pitch)):
+        dx = max(PLATE_RX - x, x - (64.0 - PLATE_RX), 0.0)
+        dy = max(PLATE_RX - y, y - (64.0 - PLATE_RX), 0.0)
+        if dx * dx + dy * dy > PLATE_RX * PLATE_RX:
+            return False
+    return True
 
 
 def snap(c):
@@ -100,6 +120,8 @@ def main():
             # gradient still reads.
             ci, cj = min(i, GRID - 1 - i), min(j, GRID - 1 - j)
             qx, qy = (ci + 0.5) * pitch, (cj + 0.5) * pitch
+            if not cell_on_plate(i, j, pitch):
+                continue  # cell would poke past the plate's corner arc
             if sample(px, qx, qy, win)[3] < 150:
                 continue  # outside the rounded plate corners
             # The favicon composes [-] for a tiny square with generous air;
