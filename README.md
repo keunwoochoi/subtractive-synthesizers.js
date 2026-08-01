@@ -161,9 +161,17 @@ tightened.
 
 ## Patches
 
-Every patch has an intent statement written before any parameter is tuned: prose plus
-3–5 measurable targets, each naming the phrase of prose it derives from. With no
-external reference to converge on, the prior intent is what defines a result as wrong.
+Every exported preset is bound to exactly one checked intent artifact. Historical provenance is explicit: `prior` means Git history proves the intent predates implementation, while `retrospective` means the artifact was reconstructed from an already tuned patch and did not guide its original tuning. New presets cannot use the frozen retrospective migration exception.
+
+<!-- generated:intent-coverage -->
+| intent coverage | count |
+|---|---:|
+| exported presets | 41 |
+| exactly mapped implemented intents | 41 |
+| written before implementation | 1 |
+| reconstructed after implementation | 40 |
+| proposed before implementation | 0 |
+<!-- /generated:intent-coverage -->
 
 <!-- generated:roster -->
 | group | patches |
@@ -182,7 +190,7 @@ external reference to converge on, the prior intent is what defines a result as 
 | | |
 |---|---|
 | harness audit assertions | 25 |
-| fail-correctly tests | 18 |
+| fail-correctly tests | 21 |
 | deliberately-broken fixtures | 8 |
 <!-- /generated:harness-stats -->
 

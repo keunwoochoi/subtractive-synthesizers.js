@@ -12,14 +12,17 @@ gate we rely on is dead.
 from __future__ import annotations
 
 import ast
+import os
 import subprocess
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import candidates as C  # noqa: E402
+import check_intents as I  # noqa: E402
 import verify_spec as V  # noqa: E402
 
 
@@ -120,7 +123,10 @@ class TestIntentCheckFailsCorrectly(unittest.TestCase):
         "missing-section": "one committed target",
         "too-few-targets": "measurable targets",
         "unsourced-target": "phrase it derives from",
-        "impl-without-intent": "NO intent.md",
+        "missing-intent": "NO implemented intent.md",
+        "orphan-intent": "orphan intent",
+        "duplicate-mapping": "duplicate mapping",
+        "mismatched-id": "mismatched preset id",
     }
 
     def _run(self, fixture):
@@ -132,6 +138,34 @@ class TestIntentCheckFailsCorrectly(unittest.TestCase):
         r = self._run("good")
         self.assertEqual(r.returncode, 0, r.stdout)
 
+    def test_hook_git_environment_does_not_turn_fixture_into_repo_root(self):
+        """Git exports GIT_* variables to hooks; fixture discovery must ignore them."""
+        env = os.environ.copy()
+        env["GIT_DIR"] = subprocess.run(
+            ["git", "rev-parse", "--absolute-git-dir"], capture_output=True,
+            text=True, check=True,
+        ).stdout.strip()
+        r = subprocess.run(
+            [sys.executable, str(self.SCRIPT), "--root", str(self.FIXTURES / "good")],
+            capture_output=True, text=True, env=env,
+        )
+        self.assertEqual(r.returncode, 0, r.stdout)
+
+    def test_intent_and_preset_in_one_commit_are_rejected(self):
+        """Existence in one tree is not evidence that the target came first."""
+        same_commit = "a" * 40
+        with (
+            mock.patch.object(I, "_is_git_root", return_value=True),
+            mock.patch.object(I, "_cutoff_ids", return_value=(set(), None)),
+            mock.patch.object(I, "_first_preset_commits", return_value=({"p": same_commit}, None)),
+            mock.patch.object(I, "_first_intent_commit", return_value=same_commit),
+        ):
+            inventory = I.inspect_repository(self.FIXTURES / "good")
+        self.assertTrue(
+            any("must predate preset commit" in error for error in inventory.errors),
+            f"same-commit intent was accepted: {inventory.errors}",
+        )
+
     def test_malformed_intents_are_rejected_for_the_right_reason(self):
         for fixture, expect in self.MUST_REJECT.items():
             with self.subTest(fixture=fixture):
@@ -139,6 +173,11 @@ class TestIntentCheckFailsCorrectly(unittest.TestCase):
                 self.assertEqual(r.returncode, 1, f"{fixture} was accepted")
                 self.assertIn(expect, r.stdout,
                               f"{fixture} was rejected, but not for the reason we rely on")
+
+    def test_every_intent_fixture_is_covered(self):
+        """A deliberately broken fixture nobody asserts against is decoration."""
+        on_disk = {path.name for path in self.FIXTURES.iterdir() if path.is_dir()}
+        self.assertEqual(on_disk - {"good"}, set(self.MUST_REJECT))
 
     def test_shipped_intents_are_wellformed(self):
         r = subprocess.run([sys.executable, str(self.SCRIPT)],

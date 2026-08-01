@@ -90,6 +90,34 @@ def gen_roster() -> str:
     return "\n".join(rows) + "\n"
 
 
+def gen_intent_coverage() -> str:
+    """Preset-to-intent coverage and honest provenance, from the enforced mapping."""
+    from check_intents import inspect_repository
+
+    inventory = inspect_repository(ROOT)
+    if inventory.errors:
+        return "_(intent mapping unavailable: run `npm run check:intents`)_\n"
+    prior = sum(
+        intent.status == "implemented" and intent.provenance == "prior"
+        for intent in inventory.intents
+    )
+    retrospective = sum(
+        intent.status == "implemented" and intent.provenance == "retrospective"
+        for intent in inventory.intents
+    )
+    proposed = sum(intent.status == "proposed" for intent in inventory.intents)
+    rows = [
+        "| intent coverage | count |",
+        "|---|---:|",
+        f"| exported presets | {len(inventory.preset_ids)} |",
+        f"| exactly mapped implemented intents | {len(inventory.implemented)} |",
+        f"| written before implementation | {prior} |",
+        f"| reconstructed after implementation | {retrospective} |",
+        f"| proposed before implementation | {proposed} |",
+    ]
+    return "\n".join(rows) + "\n"
+
+
 def _gen_roster_dirs() -> str:
     """The patch INTENT directories -- separate from the bank; an intent is a target."""
     patches = ROOT / "patches"
@@ -261,6 +289,7 @@ GENERATORS = {
     "alias-table": gen_alias_table,
     "verdicts": gen_verdicts,
     "roster": gen_roster,
+    "intent-coverage": gen_intent_coverage,
     "harness-stats": gen_harness_stats,
 }
 

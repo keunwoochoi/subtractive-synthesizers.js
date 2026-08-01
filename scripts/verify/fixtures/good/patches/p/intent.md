@@ -1,4 +1,12 @@
 # Patch intent: p
+
+Preset: `p`
+Status: implemented
+Provenance: prior
+
+## Historical provenance
+
+This intent was written before implementation.
 ## For
 Test.
 ## In words
