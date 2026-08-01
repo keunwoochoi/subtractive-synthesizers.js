@@ -33,7 +33,7 @@ Call `createEngine()` from a user gesture because browsers control when audio ma
 
 ## Demo
 
-- **[Showcase](https://keunwoochoi.github.io/subtractive-synthesizers.js/apps/playground/showcase.html)** — hear the curated patch bank.
+- **[Patch showcase](https://keunwoochoi.github.io/subtractive-synthesizers.js/apps/playground/showcase.html)** — hear the curated patch bank.
 - **[Playground](https://keunwoochoi.github.io/subtractive-synthesizers.js/apps/playground/index.html)** — play a keyboard and edit every public parameter.
 - **[Changelog](https://github.com/keunwoochoi/subtractive-synthesizers.js/blob/main/CHANGELOG.md)** — user-visible changes toward the first release.
 

@@ -25,8 +25,84 @@ try {
   page.on("console", (m) => { if (m.type() === "error") errs.push(m.text()); });
 
   await page.goto(`http://127.0.0.1:${PORT}/apps/playground/`, { timeout: 15000 });
+
+  const layout = await page.evaluate(async () => {
+    const main = document.querySelector("main");
+    const header = document.querySelector("header");
+    const footer = document.querySelector(".keyboard-dock");
+    const patchbar = document.querySelector(".patchbar");
+    const runtime = document.querySelector(".runtime");
+    const modulation = [...document.querySelectorAll(".stage.modulation .panel")]
+      .map((panel) => panel.getBoundingClientRect());
+    const before = { header: header.getBoundingClientRect().top,
+      footer: footer.getBoundingClientRect().bottom };
+    main.scrollTop = main.scrollHeight;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    return {
+      before,
+      after: { header: header.getBoundingClientRect().top,
+        footer: footer.getBoundingClientRect().bottom, scrollTop: main.scrollTop,
+        viewport: innerHeight },
+      patchInHeader: header.contains(patchbar),
+      keyboardInFooter: footer.contains(document.getElementById("kb")),
+      statusRightGap: patchbar.getBoundingClientRect().right - runtime.getBoundingClientRect().right,
+      modulation: modulation.map(({ top, width }) => ({ top, width })),
+      panels: document.querySelectorAll(".panel").length,
+      randomizers: document.querySelectorAll(".panel .randomize").length,
+    };
+  });
+  if (!layout.patchInHeader || !layout.keyboardInFooter)
+    fail("patch selector or keyboard is outside its fixed dock");
+  if (layout.after.scrollTop < 1) fail("control panels do not scroll between the fixed docks");
+  if (Math.abs(layout.before.header - layout.after.header) > 1 || layout.after.header < -1)
+    fail("title/patch dock moved while controls scrolled");
+  if (Math.abs(layout.before.footer - layout.after.footer) > 1 ||
+      Math.abs(layout.after.footer - layout.after.viewport) > 1)
+    fail("keyboard dock moved or left the viewport while controls scrolled");
+  if (layout.statusRightGap < -1 || layout.statusRightGap > 16)
+    fail(`runtime status is not at the patch bar's right edge (gap ${layout.statusRightGap})`);
+  if (layout.modulation.length !== 5 ||
+      Math.max(...layout.modulation.map((panel) => panel.top)) -
+      Math.min(...layout.modulation.map((panel) => panel.top)) > 1 ||
+      layout.modulation.some((panel) => panel.width < 184))
+    fail(`modulation panels are not one usable row: ${JSON.stringify(layout.modulation)}`);
+  if (layout.panels !== layout.randomizers)
+    fail(`expected one randomizer per panel, found ${layout.randomizers}/${layout.panels}`);
+
   await page.keyboard.press("a");
   await page.waitForFunction(() => window.__playground?.engine != null, null, { timeout: 20000 });
+
+  // A randomizer changes only its panel. Selecting the same base patch through the
+  // custom marker restores every public value, including demo-only arpeggiator state.
+  await page.evaluate(() => window.__playground.loadPreset("analog-bass"));
+  const values = (panel) => panel.locator("input, select").evaluateAll((controls) =>
+    Object.fromEntries(controls.map((control) => [control.id, control.value])));
+  const oscillator = page.locator(".panel.audio").nth(0);
+  const filter = page.locator(".panel.audio").nth(1);
+  const oscBefore = await values(oscillator);
+  const filterBefore = await values(filter);
+  await oscillator.locator(".randomize").click();
+  const oscRandom = await values(oscillator);
+  const filterRandom = await values(filter);
+  if (JSON.stringify(oscRandom) === JSON.stringify(oscBefore)) fail("oscillator randomizer changed nothing");
+  if (JSON.stringify(filterRandom) !== JSON.stringify(filterBefore))
+    fail("oscillator randomizer changed the filter panel");
+  if (await page.locator("#preset").inputValue() !== "__custom" ||
+      await page.locator("#preset option[data-custom]").count() !== 1)
+    fail("randomizing a panel did not expose the choose-a-patch reset path");
+  await page.selectOption("#preset", "analog-bass");
+  if (JSON.stringify(await values(oscillator)) !== JSON.stringify(oscBefore) ||
+      await page.locator("#preset option[data-custom]").count())
+    fail("choosing the base patch did not restore randomized oscillator values");
+
+  const arpeggiator = page.locator(".panel.play");
+  const arpBefore = await values(arpeggiator);
+  await arpeggiator.locator(".randomize").click();
+  if (JSON.stringify(await values(arpeggiator)) === JSON.stringify(arpBefore))
+    fail("arpeggiator randomizer changed nothing");
+  await page.selectOption("#preset", "analog-bass");
+  if (JSON.stringify(await values(arpeggiator)) !== JSON.stringify(arpBefore))
+    fail("choosing a patch did not restore randomized arpeggiator values");
 
   // Tap the engine node and measure. Measuring the NODE rather than the destination is
   // deliberate: it isolates "the synth is producing samples" from "the machine has

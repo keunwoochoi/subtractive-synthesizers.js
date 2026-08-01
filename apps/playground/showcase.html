@@ -1,15 +1,18 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>subtractive-synthesizers.js — showcase</title>
+<title>subtractive-synthesizers.js — patch showcase</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/svg+xml" href="./favicon-pixel.svg">
 <style>
   :root{--bg:#0b0d11;--panel:#151920;--line:#252b35;--ink:#e9ecf1;--dim:#8b95a3;
         --accent:#ffb454;--accent2:#5ad1ff;--ok:#7ee787;}
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);
+  html,body{height:100%;height:100dvh}
+  body{margin:0;background:var(--bg);color:var(--ink);overflow:hidden;
+       display:flex;flex-direction:column;
        font:14px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace}
-  header{padding:26px 24px 16px;border-bottom:1px solid var(--line)}
+  header{padding:14px 24px 12px;border-bottom:1px solid var(--line);flex:none;
+         background:var(--bg);position:relative;z-index:3}
   h1{margin:0;font-size:19px;font-weight:600;letter-spacing:.01em}
   h1 span{color:var(--accent)}
   h1 a.hl{color:var(--ink);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
@@ -17,8 +20,9 @@
   h1 .ext{font-size:.72em;margin-left:2px;text-decoration:none;display:inline-block;color:var(--accent)}
   .sub{color:var(--dim);font-size:13px;margin-top:6px}
   .sub b{color:var(--accent2);font-weight:600}
-  main{max-width:1020px;margin:0 auto;padding:20px 24px 70px}
-  .bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:18px}
+  main{width:100%;max-width:1020px;margin:0 auto;padding:14px 24px 18px;flex:1 1 auto;
+       min-height:0;overflow-y:auto;overscroll-behavior:contain}
+  .bar{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:center;margin-top:9px}
   button{background:var(--panel);color:var(--ink);border:1px solid var(--line);
          border-radius:7px;padding:10px 16px;font:inherit;cursor:pointer}
   button:hover{border-color:#3a4351}
@@ -38,54 +42,67 @@
   .card h3{margin:0 0 4px;font-size:13.5px;font-weight:600}
   .card.on h3{color:var(--accent)}
   .card p{margin:0;color:var(--dim);font-size:12px;line-height:1.45}
-  .viz{margin-top:18px;background:var(--panel);border:1px solid var(--line);
+  .visual-dock{padding:10px 24px 12px;border-top:1px solid var(--line);flex:none;
+               background:var(--bg);position:relative;z-index:3}
+  .viz{max-width:972px;margin:0 auto;background:var(--panel);border:1px solid var(--line);
        border-radius:9px;padding:12px}
-  canvas{width:100%;height:150px;display:block}
-  .steps{display:grid;grid-template-columns:repeat(16,1fr);gap:4px;margin-top:14px}
-  .st{height:30px;border-radius:4px;background:#191e26;border:1px solid var(--line)}
+  canvas{width:100%;height:108px;display:block}
+  .steps{display:grid;grid-template-columns:repeat(16,1fr);gap:4px;margin-top:8px}
+  .st{height:22px;border-radius:4px;background:#191e26;border:1px solid var(--line)}
   .st.hit{background:#2b3442}
   .st.acc{background:#3a4658}
   .st.now{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
-  .meta{display:flex;gap:22px;flex-wrap:wrap;margin-top:16px;color:var(--dim);font-size:12px}
+  .meta{display:flex;gap:14px;flex-wrap:wrap;margin-left:auto;color:var(--dim);font-size:11.5px}
   .meta b{color:var(--ok);font-weight:600}
   a{color:var(--accent2)}
+  @media (max-height:600px){
+    header{padding:7px 14px 6px}
+    h1{font-size:15px}
+    .bar{margin-top:5px;gap:6px 10px}
+    main{padding:9px 14px 10px}
+    .visual-dock{padding:6px 14px 7px}
+    .viz{padding:7px}
+    canvas{height:72px}
+    .steps{margin-top:5px}
+    .st{height:17px}
+  }
 </style>
 
 <header>
-  <h1><a class="hl" href="https://github.com/keunwoochoi/subtractive-synthesizers.js" target="_blank" rel="noopener">subtractive<span>-synthesizers</span>.js<span class="ext" aria-hidden="true">↗</span></a> — showcase</h1>
-</header>
-
-<main>
+  <h1><a class="hl" href="https://github.com/keunwoochoi/subtractive-synthesizers.js" target="_blank" rel="noopener">subtractive<span>-synthesizers</span>.js<span class="ext" aria-hidden="true">↗</span></a> — patch showcase</h1>
   <div class="bar">
-    <button id="play">▶ Play</button>
+    <button id="play" type="button" aria-pressed="false" title="Play / stop (Space)">▶ Play</button>
     <div class="tempo">tempo
       <input type="range" id="bpm" min="70" max="170" step="1" value="124">
       <output id="bpmOut">124</output> BPM
     </div>
-    <div class="tempo" id="status">click Play to start audio</div>
+    <div class="tempo" id="status">click a patch or Play · Space toggles</div>
+    <div class="meta">
+      <div>riff <b id="riff">—</b></div>
+      <div>voices <b id="voices">0</b></div>
+      <div>sample rate <b id="sr">—</b></div>
+      <div><a href="./index.html">open the full patch editor →</a></div>
+    </div>
   </div>
+</header>
 
+<main>
   <div class="cards" id="cards"></div>
+</main>
 
+<footer class="visual-dock">
   <div class="viz">
     <canvas id="scope"></canvas>
     <div class="steps" id="steps"></div>
   </div>
-
-  <div class="meta">
-    <div>riff <b id="riff">—</b></div>
-    <div>voices <b id="voices">0</b></div>
-    <div>sample rate <b id="sr">—</b></div>
-    <div><a href="./index.html">open the full patch editor →</a></div>
-  </div>
-</main>
+</footer>
 
 <script type="module">
 import { createEngine } from "../../packages/core/src/index.js";
 import { PRESETS, GROUPS, applyPreset } from "../../packages/core/src/presets.js";
 import { PATTERN_FOR, patternFor } from "./patterns.js";
 
-let engine = null, playing = false, current = "acid";
+let engine = null, engineInit = null, playing = false, current = "acid";
 let step = 0, nextTime = 0, timer = null;
 const LOOKAHEAD = 0.12, TICK = 25;
 
@@ -130,7 +147,10 @@ for (const g of GROUPS) {
     el.className = "card" + (key === current ? " on" : "");
     el.dataset.key = key;
     el.innerHTML = `<h3>${p.label}</h3><p>${p.blurb}</p>`;
-    el.onclick = () => selectPatch(key);
+    el.onclick = async () => {
+      selectPatch(key);
+      if (!playing) await startPlayback();
+    };
     row.appendChild(el);
   }
   cards.appendChild(row);
@@ -228,40 +248,78 @@ function draw() {
 }
 draw();
 
-$("play").onclick = async () => {
-  if (!engine) {
-    $("play").disabled = true; $("status").textContent = "loading engine…";
-    try {
-      const ctx = unlockedContext();
-      engine = await createEngine({
+async function ensureEngine() {
+  if (engine) return true;
+  if (!engineInit) {
+    // This call must remain before the first await so a patch-card click unlocks Safari
+    // just as reliably as the explicit Play button.
+    const ctx = unlockedContext();
+    $("play").disabled = true;
+    $("status").textContent = "loading engine…";
+    engineInit = (async () => {
+      const created = await createEngine({
         context: ctx,
         wasmUrl: "../../packages/core/wasm/subtractive_dsp.wasm",
         workletUrl: "../../packages/core/worklet/processor.js",
       });
-      await engine.resume();
-      analyser = engine.context.createAnalyser();
+      await created.resume();
+      analyser = created.context.createAnalyser();
       analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.72;
       buf = new Uint8Array(analyser.frequencyBinCount);
-      engine.node.connect(analyser);
-      applyPreset(engine, current);
-      engine.onStats = (s) => { $("voices").textContent = s.voices; };
+      created.node.connect(analyser);
+      applyPreset(created, current);
+      created.onStats = (s) => { $("voices").textContent = s.voices; };
       resize();
-      $("sr").textContent = engine.context.sampleRate + " Hz";
-      $("status").textContent = "";
-      $("play").disabled = false;
-    } catch (e) {
-      $("status").textContent = "failed: " + e.message;
-      $("play").disabled = false; return;
-    }
+      $("sr").textContent = created.context.sampleRate + " Hz";
+      engine = created;
+    })();
   }
-  playing = !playing;
+  try {
+    await engineInit;
+    $("status").textContent = "Space toggles play / stop";
+    return true;
+  } catch (e) {
+    engineInit = null;
+    $("status").textContent = "failed: " + e.message;
+    return false;
+  } finally {
+    $("play").disabled = false;
+  }
+}
+
+function setPlaying(next) {
+  if (playing === next) return;
+  playing = next;
   $("play").textContent = playing ? "■ Stop" : "▶ Play";
+  $("play").setAttribute("aria-pressed", String(playing));
+  $("status").textContent = "Space toggles play / stop";
   if (playing) {
     step = 0; nextTime = engine.context.currentTime + 0.08;
     timer = setInterval(schedule, TICK);
   } else {
-    clearInterval(timer); engine.clear(); highlight(-1);
+    clearInterval(timer); timer = null; engine.clear(); highlight(-1);
   }
-};
+}
+
+async function startPlayback() {
+  if (playing) return;
+  if (await ensureEngine()) setPlaying(true);
+}
+
+async function togglePlayback() {
+  if (playing) setPlaying(false);
+  else await startPlayback();
+}
+
+$("play").onclick = () => { void togglePlayback(); };
+addEventListener("keydown", (event) => {
+  if (event.code !== "Space" || event.repeat || event.altKey || event.ctrlKey ||
+      event.metaKey || event.shiftKey) return;
+  const target = event.target;
+  if (target instanceof Element &&
+      target.closest("button, input, select, textarea, a, [contenteditable='true']")) return;
+  event.preventDefault();
+  void togglePlayback();
+});
 
 </script>

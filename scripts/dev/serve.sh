@@ -58,7 +58,7 @@ if listening; then
   exit 1
 fi
 
-echo "→ http://127.0.0.1:$PORT/apps/playground/showcase.html   (showcase)"
+echo "→ http://127.0.0.1:$PORT/apps/playground/showcase.html   (patch showcase)"
 echo "→ http://127.0.0.1:$PORT/apps/playground/                (patch editor)"
 
 if [ "${1:-run}" = "start" ]; then

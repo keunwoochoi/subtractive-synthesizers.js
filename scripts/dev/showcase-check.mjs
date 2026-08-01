@@ -46,9 +46,32 @@ try {
   const cards = await p.locator(".card").count();
   if (cards !== expected) fail(`expected ${expected} patch cards, found ${cards}`);
 
-  await p.click("#play");
+  const docks = await p.evaluate(async () => {
+    const main = document.querySelector("main");
+    const header = document.querySelector("header");
+    const footer = document.querySelector(".visual-dock");
+    const before = { header: header.getBoundingClientRect().top,
+      footer: footer.getBoundingClientRect().bottom };
+    main.scrollTop = main.scrollHeight;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    const after = { header: header.getBoundingClientRect().top,
+      footer: footer.getBoundingClientRect().bottom, scrollTop: main.scrollTop,
+      viewport: innerHeight };
+    return { before, after };
+  });
+  if (docks.after.scrollTop < 1) fail("patch cards do not scroll between the fixed docks");
+  if (Math.abs(docks.before.header - docks.after.header) > 1 || docks.after.header < -1)
+    fail("transport header moved while patch cards scrolled");
+  if (Math.abs(docks.before.footer - docks.after.footer) > 1 ||
+      Math.abs(docks.after.footer - docks.after.viewport) > 1)
+    fail("spectrum/step dock moved or left the viewport while patch cards scrolled");
+
+  // A patch name is the primary audition gesture: it must initialize the engine and
+  // start transport, not merely move a highlight while the page remains silent.
+  await p.locator('.card[data-key="warm-pad"] h3').click();
   await p.waitForFunction(() => document.getElementById("sr").textContent !== "—",
                           null, { timeout: 20000 });
+  await p.waitForFunction(() => document.getElementById("play").textContent.includes("Stop"));
   await p.waitForTimeout(1800);
 
   // A voice counter that reads 0 while the synth is audibly playing is a UI number
@@ -69,6 +92,22 @@ try {
     lit: document.querySelectorAll(".st.now").length,
   }));
   if (!state.label.includes("Stop")) fail("transport did not enter playing state");
+
+  // Space is the global transport shortcut and must not scroll the patch list.
+  const scrollBeforeSpace = await p.locator("main").evaluate((el) => el.scrollTop);
+  await p.keyboard.press("Space");
+  await p.waitForFunction(() => document.getElementById("play").textContent.includes("Play"));
+  const stopped = await p.evaluate(() => ({
+    scrollTop: document.querySelector("main").scrollTop,
+    pressed: document.getElementById("play").getAttribute("aria-pressed"),
+    lit: document.querySelectorAll(".st.now").length,
+  }));
+  if (Math.abs(stopped.scrollTop - scrollBeforeSpace) > 1) fail("Space scrolled the patch list");
+  if (stopped.pressed !== "false" || stopped.lit) fail("Space did not fully stop transport");
+  await p.keyboard.press("Space");
+  await p.waitForFunction(() => document.getElementById("play").textContent.includes("Stop"));
+  if (await p.locator("#play").getAttribute("aria-pressed") !== "true")
+    fail("Space restarted transport without synchronizing the Play button");
 
   // Switching patch mid-play must not throw or silence the engine -- AND the UI must
   // follow. The previous version clicked cards and asserted nothing about the result,
@@ -99,9 +138,9 @@ try {
     if (lit === 0) fail(`${key}: step grid shows no steps for its group`);
   }
   await p.waitForTimeout(500);
-  await p.click("#play");
+  await p.keyboard.press("Space");
 
   if (errs.length) fail("page errors: " + errs.slice(0, 3).join(" | "));
   console.log("showcase:", JSON.stringify({ ...state, peakVoices }));
-  console.log(`SHOWCASE OK — ${expected} patches, transport runs, selection + step grid follow every click`);
+  console.log(`SHOWCASE OK — ${expected} patches, patch-click starts, Space toggles, docks stay visible, selection + step grid follow every click`);
 } finally { await b.close(); server.kill(); }
