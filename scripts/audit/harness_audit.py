@@ -222,12 +222,8 @@ def audit(root: Path) -> Report:
                             f"{f.relative_to(root)}:{i+1} has '{m.group(0)}' -- musical "
                             f"sequencing belongs in apps/, not in the library")
 
-    # --- C12: no protected name on any shipped surface.
-    # agentic-docs/licensing.md: "the marks of famous synthesizers and drum machines may
-    # not appear in preset names, public API surface, documentation, or marketing copy."
-    # That rule had no enforcement, and the bank grew to 36 patches under it. Design docs
-    # are exempt: they discuss prior art, which is exactly where naming hardware is
-    # legitimate.
+    # --- C12: no protected name on a product surface. A factual history section in the
+    # README may name its subject; presets, APIs, demos, and product claims may not.
     MARKS = ("moog", "minimoog", "juno", "jupiter", "roland", "korg", "yamaha",
              "prophet", "oberheim", "ob-xa", "solina", "jp-8000", "tb-303", "tb303",
              "tr-808", "tr808", "tr-909", "tr909", "nord", "arturia", "serum", "massive")
@@ -243,12 +239,15 @@ def audit(root: Path) -> Report:
             and "node_modules" not in f.relative_to(root).parts
             and "dist" not in f.relative_to(root).parts]
         for f in files:
+            in_readme_history = False
             for i, line in enumerate(read(f).splitlines()):
+                if f == root / "README.md" and line.startswith("## "):
+                    in_readme_history = line == "## A short build log"
                 m = mark_re.search(line)
-                if m:
+                if m and not in_readme_history:
                     r.check(False, "C12-TRADEMARK",
                             f"{f.relative_to(root)}:{i+1} names '{m.group(0)}' on a shipped "
-                            f"surface -- describe the sound, never the machine")
+                            f"product surface -- describe our sound, never brand it")
 
     # --- C9/C10: unresolved markers.
     for d in docs:

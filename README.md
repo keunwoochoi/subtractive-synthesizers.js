@@ -186,8 +186,8 @@ Budget is 60 KB gzipped for the whole library — currently **67%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **13.0 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 7.7x |
+| audio-thread budget used | **14.9 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 6.7x |
 <!-- /generated:bench -->
 
 The benchmark saturates the voice pool with the reference arrangement and enables chorus, which is the worst case this build can produce. The measurement describes the machine that regenerated the table; performance on other devices, including mobile devices, is not claimed.
@@ -244,7 +244,7 @@ Every exported preset is bound to exactly one checked intent artifact. `prior` m
 <!-- generated:harness-stats -->
 | | |
 |---|---|
-| harness audit assertions | 24 |
+| harness audit assertions | 25 |
 | Python harness/spec tests | 23 |
 | public metadata/README tests | 8 |
 | deliberately-broken fixtures | 8 |
@@ -271,6 +271,21 @@ npm run check:install
 npm run check:types
 npm run check:bundlers
 ```
+
+## A short build log
+
+This project started after I released [`physical-instruments.js`](https://github.com/keunwoochoi/physical-instruments.js). Having a working project in a similar product area, I could begin with a very small prompt: I put this folder next to [`physical-instruments.js`](https://github.com/keunwoochoi/physical-instruments.js) and asked a coding agent (Claude Code or Codex—I use both interchangeably) to make the subtractive-synthesis counterpart.
+
+Subtractive synthesis starts with a deliberately bright oscillator and carves a playable tone out of it: the filter removes spectral energy, envelopes give the note its motion, LFOs animate it, and the amplifier shapes its life in time. The biggest difference from `physical-instruments.js` is that instead of simulating a vibrating string, bar, or air column, this engine generates band-limited periodic waveforms and noise, then routes them through resonant filters, control-rate modulation, per-voice envelopes, and effects. There are a lot of hardware references: the [Moog Minimoog Model D](https://www.moogmusic.com/synthesizers/minimoog-model-d/), [ARP Odyssey](https://www.korg.com/us/products/synthesizers/arpodyssey/), [Korg MS-20](https://www.korg.com/us/products/synthesizers/ms_20mini/), [Sequential Prophet-5](https://sequential.com/product/prophet-5/), [Yamaha CS-80](https://usa.yamaha.com/products/contents/music_production/synth_chronology/modal/modal_cs-80.html), the [Oberheim OB-X/OB-Xa family](https://oberheim.com/products/ob-x8/), and Roland's [Jupiter-8](https://www.roland.com/global/products/rc_jupiter-8/), [Juno-60/Juno-106](https://www.roland.com/global/products/rc_juno-106/), [SH-101](https://www.roland.com/global/products/rc_sh-101/), and [TB-303](https://www.roland.com/global/promos/303day/).
+
+There were times when finding a cool subtractive synthesizer sound was enough to define the sound of a song. For example:
+
+- [Bernie Worrell recalled](https://www.powmag.net/p/the-minute-you-think-you-know-it-all-youre-in-trouble-an-interview-with-bernie-worrell) building Parliament's “Flash Light” bass line from three Minimoogs layered together—a useful reminder that a monophonic instrument can still make an enormous arrangement-defining sound.
+- Herbie Hancock's [“Chameleon”](https://www.arpsynth.com/en/experience/sounds/2015/06/music/) made the ARP Odyssey bass line part of the vocabulary of jazz-funk.
+- [Sequential credits the Prophet-5](https://sequential.com/50-years-of-sequential/) with Hall & Oates' “I Can't Go for That,” the opening chords of Michael Jackson's “Thriller,” the pad in A-ha's “Take On Me,” and Radiohead's “Everything in Its Right Place.”
+- Eddie Van Halen recorded the keyboard riff of [“Jump”](https://www.musicradar.com/news/van-halens-Jump-at-40-how-the-most-famous-keyboard-riff-of-all-time-was-created-and-how-you-can-too) on an Oberheim OB-Xa, turning a synth-brass patch into one of rock's most recognizable openings.
+- [Vangelis made the Yamaha CS-80](https://usa.yamaha.com/products/contents/proaudio/training_support/micro_tutorial/20170525/index.html) inseparable from the sound world of the *Blade Runner* score.
+- Phuture's [“Acid Tracks”](https://articles.roland.com/acid-tracks-by-phuture/) transformed a second-hand Roland TB-303—originally intended to imitate a bass guitar—into the defining squelch of acid house.
 
 ## License
 

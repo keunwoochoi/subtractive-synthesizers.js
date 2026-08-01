@@ -19,13 +19,11 @@ Unlike the sibling project, our porting exposure is low (the algorithms are text
 **trademark** exposure is high, because every classic subtractive sound is associated with a
 protected name.
 
-**The marks of famous synthesizers and drum machines may not appear in preset names, public API
-surface, documentation, or marketing copy.** This includes but is not limited to Moog, Minimoog,
-Juno, Jupiter, TB-303, TR-808, TR-909, Prophet, Oberheim, OB-Xa, Solina, and JP-8000.
+**The marks of famous synthesizers and drum machines may not be used in preset names, public API surface, demo labels, product claims, or marketing copy that implies emulation, compatibility, endorsement, or origin.** This includes but is not limited to Moog, Minimoog, Juno, Jupiter, TB-303, TR-808, TR-909, Prophet, Oberheim, OB-Xa, Solina, and JP-8000.
 
-**Describe the sound, never the machine.** `acid-bass`, not `303-bass`. "Ladder filter" is a
-technical term for a topology and is fine; "Moog ladder" in shipped copy is not. Internal design
-docs may name hardware when discussing prior art — shipped surfaces may not.
+Factual nominative references are permitted in the README's clearly identified historical/educational section when they explain synthesis history or identify a sourced recording fact. They must not name this product, a preset, or a feature; suggest that a manufacturer is connected to the project; or claim that this engine reproduces a specific circuit. Internal design documents may continue to name hardware when discussing prior art.
+
+**Describe our sound, never brand it.** `acid-bass`, not `303-bass`. “Ladder filter” is a technical term for a topology and is fine; a protected mark remains out of shipped sound names and product claims.
 
 The underlying patents are not a concern: the original transistor-ladder patent (filed 1966, granted
 1969) expired in the 1980s and the topology is long in the public domain.

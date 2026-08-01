@@ -46,6 +46,23 @@ try {
   const cards = await p.locator(".card").count();
   if (cards !== expected) fail(`expected ${expected} patch cards, found ${cards}`);
 
+  // The scroll box must cover the whole middle band, not only the centered cards.
+  // Otherwise a wheel gesture over either empty gutter does nothing even though the
+  // pointer is plainly between the fixed header and footer.
+  const gutterPoints = await p.locator("main").evaluate((main) => {
+    const box = main.getBoundingClientRect();
+    return [{ x: 32, y: box.top + box.height / 2 },
+      { x: innerWidth - 32, y: box.top + box.height / 2 }];
+  });
+  for (const point of gutterPoints) {
+    await p.locator("main").evaluate((main) => { main.scrollTop = 0; });
+    await p.mouse.move(point.x, point.y);
+    await p.mouse.wheel(0, 400);
+    await p.waitForTimeout(100);
+    const gutterScroll = await p.locator("main").evaluate((main) => main.scrollTop);
+    if (gutterScroll < 1) fail(`patch cards do not wheel-scroll from gutter x=${point.x}`);
+  }
+
   const docks = await p.evaluate(async () => {
     const main = document.querySelector("main");
     const header = document.querySelector("header");
@@ -63,7 +80,10 @@ try {
         current: link.getAttribute("aria-current"), color: style.color,
         background: style.backgroundColor };
     });
-    return { before, after, views, repoHref: document.querySelector("header h1 a.hl").href };
+    return { before, after, views, repoHref: document.querySelector("header h1 a.hl").href,
+      redundantEditorLink: document.querySelector('.meta a[href="./index.html"]') !== null,
+      statusText: document.getElementById("status").textContent,
+      playTitle: document.getElementById("play").title };
   });
   if (docks.after.scrollTop < 1) fail("patch cards do not scroll between the fixed docks");
   if (Math.abs(docks.before.header - docks.after.header) > 1 || docks.after.header < -1)
@@ -80,6 +100,9 @@ try {
     fail(`showcase view tabs are mislabeled or miswired: ${JSON.stringify(docks.views)}`);
   if (showcaseView.color === editorView.color && showcaseView.background === editorView.background)
     fail("selected showcase tab is not visually distinguished from the editor tab");
+  if (docks.redundantEditorLink) fail("showcase still has the redundant full-editor text link");
+  if (/space toggles/i.test(docks.statusText) || /space/i.test(docks.playTitle))
+    fail("showcase still displays Space shortcut helper text");
 
   // A patch name is the primary audition gesture: it must initialize the engine and
   // start transport, not merely move a highlight while the page remains silent.

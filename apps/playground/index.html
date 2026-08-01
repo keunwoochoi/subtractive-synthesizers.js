@@ -31,8 +31,9 @@
   .viewtabs a:hover{color:var(--ink);border-color:var(--line);background:var(--panel)}
   .viewtabs a[aria-current="page"]{color:var(--ink);border-color:var(--audio);
                                    background:var(--panel);cursor:default}
-  main{width:100%;max-width:1120px;margin:0 auto;padding:14px 24px 18px;flex:1 1 auto;
-       min-height:0;overflow-y:auto;overscroll-behavior:contain}
+  main{width:100%;padding:14px 24px 18px;flex:1 1 auto;min-height:0;
+       overflow-y:auto;overscroll-behavior:contain}
+  .main-inner{max-width:1072px;margin:0 auto}
 
   /* --- signal flow map ------------------------------------------------------ */
   .patchbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--panel);
@@ -167,6 +168,7 @@
 </header>
 
 <main>
+<div class="main-inner">
   <div class="flow">
     <div class="chain">
       <div class="node audio"><b>OSC</b>saw / pulse / tri<br>+ sub + noise</div>
@@ -332,12 +334,13 @@
     </div>
   </div>
 
+</div>
 </main>
 
 <footer class="keyboard-dock">
   <div class="keyboard-inner">
     <div id="kb"></div>
-    <div class="hint"><code>z</code>/<code>x</code> shift octave. <a href="./showcase.html">patch showcase →</a></div>
+    <div class="hint"><code>z</code>/<code>x</code> shift octave.</div>
   </div>
 </footer>
 

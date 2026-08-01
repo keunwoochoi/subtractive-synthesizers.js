@@ -26,6 +26,22 @@ try {
 
   await page.goto(`http://127.0.0.1:${PORT}/apps/playground/`, { timeout: 15000 });
 
+  // The scrollable middle band spans the viewport so wheel gestures over either
+  // centered-content gutter behave exactly like gestures over a control panel.
+  const gutterPoints = await page.locator("main").evaluate((main) => {
+    const box = main.getBoundingClientRect();
+    return [{ x: 32, y: box.top + box.height / 2 },
+      { x: innerWidth - 32, y: box.top + box.height / 2 }];
+  });
+  for (const point of gutterPoints) {
+    await page.locator("main").evaluate((main) => { main.scrollTop = 0; });
+    await page.mouse.move(point.x, point.y);
+    await page.mouse.wheel(0, 400);
+    await page.waitForTimeout(100);
+    const gutterScroll = await page.locator("main").evaluate((main) => main.scrollTop);
+    if (gutterScroll < 1) fail(`control panels do not wheel-scroll from gutter x=${point.x}`);
+  }
+
   const layout = await page.evaluate(async () => {
     const main = document.querySelector("main");
     const header = document.querySelector("header");
@@ -49,6 +65,7 @@ try {
       modulation: modulation.map(({ top, width }) => ({ top, width })),
       panels: document.querySelectorAll(".panel").length,
       randomizers: document.querySelectorAll(".panel .randomize").length,
+      redundantShowcaseLink: document.querySelector('.keyboard-dock a[href="./showcase.html"]') !== null,
       repoHref: document.querySelector("header h1 a.hl").href,
       views: [...document.querySelectorAll(".viewtabs a")].map((link) => {
         const style = getComputedStyle(link);
@@ -84,6 +101,7 @@ try {
     fail(`editor view tabs are mislabeled or miswired: ${JSON.stringify(layout.views)}`);
   if (editorView.color === showcaseView.color && editorView.background === showcaseView.background)
     fail("selected editor tab is not visually distinguished from the showcase tab");
+  if (layout.redundantShowcaseLink) fail("editor still has the redundant showcase text link");
 
   await page.keyboard.press("a");
   await page.waitForFunction(() => window.__playground?.engine != null, null, { timeout: 20000 });

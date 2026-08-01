@@ -1,6 +1,6 @@
 # PRINCIPLES
 
-**Version 1.3.0** · Ratified 2026-07-28 · Last amended 2026-07-28
+**Version 1.4.0** · Ratified 2026-07-28 · Last amended 2026-08-01
 
 > This is the constitution. `AGENTS.md` routes; this file governs and supersedes other practice.
 > Amendments are dated, quote the owner verbatim, say what the old rule got wrong, and carry a
@@ -125,7 +125,7 @@ to fail is not evidence of anything.
 ### License hygiene is absolute
 Port MIT/BSD freely with ledger entries; never open GPL/LGPL/AGPL source — papers-only
 reimplementation. **Trademarks are the live risk in this domain:** the names of famous synthesizers
-may not appear in presets, public API, docs, or marketing. **Describe the sound, never the machine.**
+may not be used in presets, public API, demo labels, or emulation claims. A clearly historical README section may make factual, sourced references to the machines. **Describe our sounds, never brand them.**
 
 ## What we are not
 
@@ -141,9 +141,9 @@ may not appear in presets, public API, docs, or marketing. **Describe the sound,
 
 Current version is in the header above. Full reasoning and Sync Impact Reports:
 [`agentic-docs/amendments.md`](agentic-docs/amendments.md).
-
 | Version | Date | What changed |
 |---|---|---|
+| 1.4.0 | 2026-08-01 | Factual, sourced instrument history permitted in one README section; branded sounds remain prohibited |
 | 1.3.0 | 2026-07-28 | Publishing identity is constitutional — GitHub actions come from the owning account, enforced |
 | 1.2.0 | 2026-07-28 | Evaluator integrity made constitutional — an exact metric is not a safe metric; taste becomes the next metric |
 | 1.1.0 | 2026-07-28 | Direct-to-main permitted during bootstrap (owner decision) |

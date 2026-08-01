@@ -7,6 +7,21 @@ context on every task, and the constitution has a hard line budget for exactly t
 Every amendment states what the old rule got wrong, quotes the owner verbatim where a decision was
 theirs, and carries a **Sync Impact Report** naming the artifacts it must propagate to.
 
+### 1.4.0 — 2026-08-01 — Factual instrument history is not product branding
+
+**Owner, verbatim:** *“Add multiple synthesizer names of the same kind, not only Moog, but just in general. Like there should be quite a lot of them. Just pick the popular ones.”* And: *“If there's a very like seminal one in the music history ... some sort of historical snippet like that, information like that, like a fun fact.”*
+
+**What the old rule got wrong.** The blanket ban treated a protected mark used to name a preset or imply emulation as equivalent to a factual, sourced historical reference. Those are not the same use. The former can confuse product origin; the latter tells readers where subtractive synthesis sits in musical history, which the owner explicitly requested for both technical and musical audiences.
+
+**New rule.** Protected names remain prohibited in presets, public API, demo labels, product claims, and copy that implies emulation, compatibility, endorsement, or origin. The README's clearly identified historical/educational section may use factual nominative references to identify instruments and sourced recording facts. Those references may not name this product, a preset, or a feature, and the library remains explicitly not an emulation of any specific hardware.
+
+**Sync Impact Report** — artifacts this amendment must propagate to:
+- `PRINCIPLES.md` license-hygiene rule and amendment index — **required and done**.
+- `agentic-docs/licensing.md` trademark policy — **required and done**.
+- `scripts/audit/harness_audit.py` — **required and done**: continue rejecting marks across product surfaces while allowing only the named README history section.
+- `scripts/audit/fixtures/good/README.md` and the existing trademark-leak fixture — **required and done**: prove factual history passes while a protected name in package source still fails.
+- `README.md` short build log — **required and done**: keep names inside the historical section and link the recording facts to sources.
+
 ### 1.3.0 — 2026-07-28 — Publishing identity is constitutional
 
 **Owner, verbatim:** *"you made a terrible mistake. always use `<owner>` github account. always
