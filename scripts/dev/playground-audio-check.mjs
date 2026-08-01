@@ -49,6 +49,13 @@ try {
       modulation: modulation.map(({ top, width }) => ({ top, width })),
       panels: document.querySelectorAll(".panel").length,
       randomizers: document.querySelectorAll(".panel .randomize").length,
+      repoHref: document.querySelector("header h1 a.hl").href,
+      views: [...document.querySelectorAll(".viewtabs a")].map((link) => {
+        const style = getComputedStyle(link);
+        return { text: link.textContent, href: link.getAttribute("href"),
+          current: link.getAttribute("aria-current"), color: style.color,
+          background: style.backgroundColor };
+      }),
     };
   });
   if (!layout.patchInHeader || !layout.keyboardInFooter)
@@ -68,6 +75,15 @@ try {
     fail(`modulation panels are not one usable row: ${JSON.stringify(layout.modulation)}`);
   if (layout.panels !== layout.randomizers)
     fail(`expected one randomizer per panel, found ${layout.randomizers}/${layout.panels}`);
+  const [editorView, showcaseView] = layout.views;
+  if (layout.repoHref !== "https://github.com/keunwoochoi/subtractive-synthesizers.js" ||
+      layout.views.length !== 2 || editorView.text !== "Patch editor" ||
+      editorView.href !== "./index.html" || editorView.current !== "page" ||
+      showcaseView.text !== "Patch showcase" || showcaseView.href !== "./showcase.html" ||
+      showcaseView.current !== null)
+    fail(`editor view tabs are mislabeled or miswired: ${JSON.stringify(layout.views)}`);
+  if (editorView.color === showcaseView.color && editorView.background === showcaseView.background)
+    fail("selected editor tab is not visually distinguished from the showcase tab");
 
   await page.keyboard.press("a");
   await page.waitForFunction(() => window.__playground?.engine != null, null, { timeout: 20000 });

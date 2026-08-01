@@ -57,7 +57,13 @@ try {
     const after = { header: header.getBoundingClientRect().top,
       footer: footer.getBoundingClientRect().bottom, scrollTop: main.scrollTop,
       viewport: innerHeight };
-    return { before, after };
+    const views = [...document.querySelectorAll(".viewtabs a")].map((link) => {
+      const style = getComputedStyle(link);
+      return { text: link.textContent, href: link.getAttribute("href"),
+        current: link.getAttribute("aria-current"), color: style.color,
+        background: style.backgroundColor };
+    });
+    return { before, after, views, repoHref: document.querySelector("header h1 a.hl").href };
   });
   if (docks.after.scrollTop < 1) fail("patch cards do not scroll between the fixed docks");
   if (Math.abs(docks.before.header - docks.after.header) > 1 || docks.after.header < -1)
@@ -65,6 +71,15 @@ try {
   if (Math.abs(docks.before.footer - docks.after.footer) > 1 ||
       Math.abs(docks.after.footer - docks.after.viewport) > 1)
     fail("spectrum/step dock moved or left the viewport while patch cards scrolled");
+  const [editorView, showcaseView] = docks.views;
+  if (docks.repoHref !== "https://github.com/keunwoochoi/subtractive-synthesizers.js" ||
+      docks.views.length !== 2 || editorView.text !== "Patch editor" ||
+      editorView.href !== "./index.html" || editorView.current !== null ||
+      showcaseView.text !== "Patch showcase" || showcaseView.href !== "./showcase.html" ||
+      showcaseView.current !== "page")
+    fail(`showcase view tabs are mislabeled or miswired: ${JSON.stringify(docks.views)}`);
+  if (showcaseView.color === editorView.color && showcaseView.background === editorView.background)
+    fail("selected showcase tab is not visually distinguished from the editor tab");
 
   // A patch name is the primary audition gesture: it must initialize the engine and
   // start transport, not merely move a highlight while the page remains silent.

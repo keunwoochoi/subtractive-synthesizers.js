@@ -1,6 +1,6 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>subtractive-synthesizers.js</title>
+<title>subtractive-synthesizers.js — patch editor</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/svg+xml" href="./favicon-pixel.svg">
 <style>
@@ -19,11 +19,18 @@
   header{padding:11px 24px 12px;border-bottom:1px solid var(--line);flex:none;
          background:var(--bg);position:relative;z-index:3}
   .header-inner{max-width:1072px;margin:0 auto}
+  .titlebar{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
   h1{margin:0;font-size:18px;font-weight:600;letter-spacing:.01em}
   h1 span{color:var(--audio)}
   h1 a.hl{color:var(--ink);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
   h1 a.hl:hover{text-decoration-thickness:2px}
   h1 .ext{font-size:.72em;margin-left:2px;text-decoration:none;display:inline-block;color:var(--audio)}
+  .viewtabs{display:flex;align-items:center;gap:4px}
+  .viewtabs a{padding:3px 8px;border:1px solid transparent;border-radius:5px;color:var(--dim);
+              text-decoration:none;font-size:10.5px;font-weight:600;white-space:nowrap}
+  .viewtabs a:hover{color:var(--ink);border-color:var(--line);background:var(--panel)}
+  .viewtabs a[aria-current="page"]{color:var(--ink);border-color:var(--audio);
+                                   background:var(--panel);cursor:default}
   main{width:100%;max-width:1120px;margin:0 auto;padding:14px 24px 18px;flex:1 1 auto;
        min-height:0;overflow-y:auto;overscroll-behavior:contain}
 
@@ -140,7 +147,13 @@
 
 <header>
   <div class="header-inner">
-    <h1><a class="hl" href="https://github.com/keunwoochoi/subtractive-synthesizers.js" target="_blank" rel="noopener">subtractive<span>-synthesizers</span>.js<span class="ext" aria-hidden="true">↗</span></a></h1>
+    <div class="titlebar">
+      <h1><a class="hl" href="https://github.com/keunwoochoi/subtractive-synthesizers.js" target="_blank" rel="noopener">subtractive<span>-synthesizers</span>.js<span class="ext" aria-hidden="true">↗</span></a></h1>
+      <nav class="viewtabs" aria-label="Demo views">
+        <a href="./index.html" aria-current="page">Patch editor</a>
+        <a href="./showcase.html">Patch showcase</a>
+      </nav>
+    </div>
     <div class="patchbar">
       <label for="preset">patch</label>
       <select id="preset"></select>
