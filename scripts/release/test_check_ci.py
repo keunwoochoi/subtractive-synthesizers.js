@@ -29,14 +29,23 @@ def clean_git_environment() -> dict[str, str]:
     return {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
 
 
-def repository_snapshot() -> dict[str, str]:
+def repository_snapshot(
+    root: Path = ROOT, env: dict[str, str] | None = None
+) -> dict[str, tuple[int, str]]:
     """Capture every persistent Git surface the fixture could have changed."""
-    env = clean_git_environment()
+    env = env or clean_git_environment()
 
-    def git(*args: str) -> str:
-        return subprocess.check_output(
-            ["git", *args], cwd=ROOT, env=env, text=True, stderr=subprocess.STDOUT
+    def git(*args: str) -> tuple[int, str]:
+        result = subprocess.run(
+            ["git", *args],
+            cwd=root,
+            env=env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
         )
+        # Absence is state too: clean CI clones need not configure user.name/email.
+        return result.returncode, result.stdout
 
     return {
         "config": git("config", "--local", "--null", "--list", "--show-origin"),
@@ -244,6 +253,17 @@ class TestFixtureIsolation(unittest.TestCase):
             )
             self.assertEqual(local_identity.returncode, 1, local_identity.stdout)
             self.assertEqual(local_identity.stdout, "")
+
+            empty_home = fixture.root / "empty-home"
+            empty_home.mkdir()
+            no_identity_env = {
+                **fixture.git_env,
+                "HOME": str(empty_home),
+                "XDG_CONFIG_HOME": str(empty_home),
+            }
+            identity_free = repository_snapshot(fixture.root, no_identity_env)
+            self.assertEqual(identity_free["user.name"], (1, ""))
+            self.assertEqual(identity_free["user.email"], (1, ""))
         finally:
             fixture.close()
 
