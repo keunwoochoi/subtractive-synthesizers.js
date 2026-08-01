@@ -123,7 +123,17 @@ echo
 echo "== quality gates =="
 run() {  # run <label> <command...>
   local label=$1; shift
-  if "$@" >/dev/null 2>&1; then ok "$label"; else bad "$label"; fi
+  local output
+  output=$(mktemp)
+  if "$@" >"$output" 2>&1; then
+    ok "$label"
+  else
+    bad "$label"
+    # Browser gates name their engine and lifecycle stage in the final diagnostic.
+    # Keep output bounded, but do not discard the line that explains the failure.
+    tail -n 12 "$output" | sed 's/^/        /'
+  fi
+  rm -f "$output"
 }
 run "harness audit"            scripts/audit/harness-audit.sh
 run "bundle size"              scripts/audit/bundle-size-audit.sh
@@ -131,11 +141,13 @@ run "generated docs are current" python3 scripts/gen_docs.py --check
 run "engine lifecycle"         npm run --silent test:lifecycle
 
 if (( FULL )); then
-  run "install from the tarball"  node scripts/dev/install-check.mjs
-  run "README quickstart runs"    node scripts/verify/check_quickstart.mjs
-  run "Vite, webpack and Next"    node scripts/dev/bundler-check.mjs
+  run "installed package [chromium]" env BROWSER=chromium node scripts/dev/install-check.mjs
+  run "installed package [webkit]"   env BROWSER=webkit node scripts/dev/install-check.mjs
+  run "README quickstart [chromium]" env BROWSER=chromium node scripts/verify/check_quickstart.mjs
+  run "README quickstart [webkit]"   env BROWSER=webkit node scripts/verify/check_quickstart.mjs
+  run "Vite, webpack and Next"       node scripts/dev/bundler-check.mjs
 else
-  warn "skipped install, quickstart and bundler gates — rerun with --full before tagging"
+  warn "skipped Chromium/WebKit install, quickstart and bundler gates — rerun with --full before tagging"
 fi
 
 # -------------------------------------------------------------------------- verdict
