@@ -9,7 +9,10 @@ jobs:
   build-and-audit:
     runs-on: ubuntu-24.04
     steps:
+      # Intent provenance is a history claim: the audit reads the frozen migration
+      # cutoff and proves every future prior intent is an ancestor of its preset.
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
       - uses: actions/setup-python@v5
         with: { python-version: '3.11' }
       - uses: actions/setup-node@v4
