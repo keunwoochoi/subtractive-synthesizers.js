@@ -31,7 +31,9 @@ echo
 
 # ---------------------------------------------------------------- version & changelog
 echo "== version and changelog =="
+FINAL_VERSION=0
 if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  FINAL_VERSION=1
   ok "version $VERSION is a release version"
 else
   # Not a failure: a draft version is the CORRECT state until a human decides to ship.
@@ -172,6 +174,20 @@ cat <<EOF
 Publishing is behind an authority gate (CLAUDE.md) and this script will not cross it.
 When a human decides to release, these are the steps:
 
+EOF
+
+if (( FINAL_VERSION )); then
+  cat <<EOF
+  1. authenticate npm as owner    npm whoami
+  2. re-run this check            scripts/release/check-release-ready.sh --full
+  3. tag                          git tag -a v$VERSION -m "v$VERSION"
+  4. push tag                     git push origin v$VERSION
+  5. publish                      npm publish --access public ./packages/core
+  6. GitHub release               scripts/gh-owner.sh release create v$VERSION --notes-file CHANGELOG.md
+
+EOF
+else
+  cat <<EOF
   1. set the final version        npm version --no-git-tag-version --prefix packages/core <x.y.z>
   2. move Unreleased into it      \$EDITOR CHANGELOG.md
   3. re-run this check            scripts/release/check-release-ready.sh --full
@@ -181,6 +197,10 @@ When a human decides to release, these are the steps:
   7. publish                      npm publish --access public ./packages/core
   8. GitHub release               scripts/gh-owner.sh release create v<x.y.z> --notes-file CHANGELOG.md
 
-Step 7 is irreversible: npm does not allow a version to be republished, and unpublishing
-is restricted. Step 3 is what makes step 7 safe.
+EOF
+fi
+
+cat <<EOF
+The npm publish step is irreversible: npm does not allow a version to be republished, and unpublishing
+is restricted. The full readiness check is what makes that step safe.
 EOF

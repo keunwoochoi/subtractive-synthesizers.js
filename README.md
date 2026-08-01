@@ -9,7 +9,7 @@ A browser subtractive synthesizer with 41 curated patches and 47 documented cont
 <!-- /generated:product-summary -->
 
 <!-- generated:package-status -->
-> **Release status:** This checkout carries pre-release manifest version `0.1.0-draft.0`. The install command below is the intended registry path after the owner authorizes the first publish; the live demos remain available now.
+> **Release status:** This checkout carries final manifest version `0.1.0`. Registry publication is a separate human-authorized operation; confirm the available version on the [npm package page](https://www.npmjs.com/package/subtractive-synthesizers.js).
 <!-- /generated:package-status -->
 
 ## Install
@@ -186,8 +186,8 @@ Budget is 60 KB gzipped for the whole library — currently **67%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **13.3 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 7.5x |
+| audio-thread budget used | **13.0 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 7.7x |
 <!-- /generated:bench -->
 
 The benchmark saturates the voice pool with the reference arrangement and enables chorus, which is the worst case this build can produce. The measurement describes the machine that regenerated the table; performance on other devices, including mobile devices, is not claimed.
@@ -245,7 +245,7 @@ Every exported preset is bound to exactly one checked intent artifact. `prior` m
 | | |
 |---|---|
 | harness audit assertions | 24 |
-| Python harness/spec tests | 21 |
+| Python harness/spec tests | 23 |
 | public metadata/README tests | 8 |
 | deliberately-broken fixtures | 8 |
 <!-- /generated:harness-stats -->

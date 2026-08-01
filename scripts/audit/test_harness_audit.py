@@ -15,8 +15,10 @@ check we care about is silently dead.
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -75,6 +77,18 @@ class TestIdentityCheckFailsCorrectly(unittest.TestCase):
         return subprocess.run([str(self.SCRIPT), expected, actual],
                               capture_output=True, text=True)
 
+    def _run_with_fake_gh(self, gh_body):
+        with tempfile.TemporaryDirectory() as temp:
+            fake_bin = Path(temp) / "bin"
+            fake_bin.mkdir()
+            fake_gh = fake_bin / "gh"
+            fake_gh.write_text("#!/usr/bin/env bash\nset -euo pipefail\n" + gh_body)
+            fake_gh.chmod(0o755)
+            env = os.environ.copy()
+            env["PATH"] = f"{fake_bin}:{env['PATH']}"
+            return subprocess.run([str(self.SCRIPT), "owner"], capture_output=True,
+                                  text=True, env=env)
+
     def test_matching_identity_passes(self):
         r = self._run("owner", "owner")
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -87,6 +101,34 @@ class TestIdentityCheckFailsCorrectly(unittest.TestCase):
     def test_failure_message_names_the_fix(self):
         r = self._run("owner", "wrong")
         self.assertIn("gh auth switch -u owner", r.stderr)
+
+    def test_mismatched_live_identity_self_heals_before_reporting(self):
+        r = self._run_with_fake_gh(r'''
+state="$0.state"
+case "$1 $2" in
+  "api user")
+    [ -f "$state" ] && echo owner || echo wrong
+    ;;
+  "auth switch")
+    [ "$3" = "-u" ] && [ "$4" = "owner" ]
+    touch "$state"
+    ;;
+  *) exit 2 ;;
+esac
+''')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("identity ok — owner", r.stdout)
+
+    def test_failed_self_heal_still_rejects_wrong_identity(self):
+        r = self._run_with_fake_gh(r'''
+case "$1 $2" in
+  "api user") echo wrong ;;
+  "auth switch") exit 1 ;;
+  *) exit 2 ;;
+esac
+''')
+        self.assertEqual(r.returncode, 1, "a failed account switch was accepted")
+        self.assertIn("IDENTITY CHECK FAIL", r.stderr)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 {
   "name": "subtractive-synthesizers.js",
-  "version": "0.1.0-draft.0",
+  "version": "0.1.0",
   "description": "Analog-style subtractive synthesizers for the browser. Computed on the fly, no samples, tens of kilobytes.",
   "license": "MIT OR Apache-2.0",
   "type": "module",

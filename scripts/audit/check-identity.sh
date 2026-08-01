@@ -56,6 +56,20 @@ if [ -z "$ACTUAL" ]; then
   fi
 fi
 
+# SELF-HEAL FIRST, REPORT ONLY IF THAT FAILS.
+#
+# Owner, 2026-07-29: "do the fucking gh auth switch -u keunwoochoi without nagging me.
+# always." The earlier design reported and left the fix to a human, which was wrong twice
+# over: the account is a contended machine-global setting that other processes flip
+# constantly, so the warning fires for reasons nobody here caused, and a warning that
+# appears on every run and has one known fix is a warning that trains people to skip
+# reading output. If the owning account is already authenticated, just switch to it.
+if [ "$ACTUAL" != "$EXPECTED" ] && [ -z "${2:-}" ] && command -v gh >/dev/null 2>&1; then
+  if gh auth switch -u "$EXPECTED" >/dev/null 2>&1; then
+    ACTUAL=$(gh api user --jq .login 2>/dev/null || echo "$ACTUAL")
+  fi
+fi
+
 if [ "$ACTUAL" != "$EXPECTED" ]; then
   cat >&2 <<MSG
 IDENTITY CHECK FAIL
