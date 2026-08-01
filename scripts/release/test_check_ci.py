@@ -29,6 +29,27 @@ def clean_git_environment() -> dict[str, str]:
     return {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
 
 
+def repository_snapshot() -> dict[str, str]:
+    """Capture every persistent Git surface the fixture could have changed."""
+    env = clean_git_environment()
+
+    def git(*args: str) -> str:
+        return subprocess.check_output(
+            ["git", *args], cwd=ROOT, env=env, text=True, stderr=subprocess.STDOUT
+        )
+
+    return {
+        "config": git("config", "--local", "--null", "--list", "--show-origin"),
+        "user.name": git("config", "user.name"),
+        "user.email": git("config", "user.email"),
+        "bare": git("rev-parse", "--is-bare-repository"),
+        "head": git("rev-parse", "HEAD"),
+        "refs": git("show-ref"),
+        "remotes": git("remote", "-v"),
+        "status": git("status", "--porcelain=v1", "--untracked-files=all"),
+    }
+
+
 class CiGateFixture:
     def __init__(self) -> None:
         self.temp = tempfile.TemporaryDirectory(prefix="subsynth-ci-gate-")
@@ -63,11 +84,25 @@ class CiGateFixture:
         )
         wrapper.chmod(0o755)
         subprocess.run(["git", "init", "-q", "-b", "main"], cwd=self.root, env=self.git_env, check=True)
-        subprocess.run(["git", "config", "user.name", "CI Gate Test"], cwd=self.root, env=self.git_env, check=True)
-        subprocess.run(["git", "config", "user.email", "ci-gate@example.invalid"], cwd=self.root, env=self.git_env, check=True)
         (self.root / "fixture.txt").write_text("fixture\n", encoding="utf-8")
         subprocess.run(["git", "add", "."], cwd=self.root, env=self.git_env, check=True)
-        subprocess.run(["git", "commit", "-qm", "fixture"], cwd=self.root, env=self.git_env, check=True)
+        # Identity is command-local. Persisting it with `git config` once escaped this
+        # fixture under pre-commit and changed the owning repository's next commit.
+        subprocess.run(
+            [
+                "git",
+                "-c",
+                "user.name=CI Gate Test",
+                "-c",
+                "user.email=ci-gate@example.invalid",
+                "commit",
+                "-qm",
+                "fixture",
+            ],
+            cwd=self.root,
+            env=self.git_env,
+            check=True,
+        )
         self.sha = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=self.root, env=self.git_env, text=True
         ).strip()
@@ -181,6 +216,38 @@ class TestReleaseCiGate(unittest.TestCase):
     def test_release_readiness_uses_strict_mode(self) -> None:
         text = RELEASE_CHECK.read_text(encoding="utf-8")
         self.assertIn("scripts/audit/check-ci.sh --require-green", text)
+
+
+class TestFixtureIsolation(unittest.TestCase):
+    def test_fixture_leaves_repository_identity_config_and_state_unchanged(self) -> None:
+        before = repository_snapshot()
+        fixture = CiGateFixture()
+        try:
+            result = fixture.run(
+                {
+                    "headSha": fixture.sha,
+                    "status": "completed",
+                    "conclusion": "success",
+                    "workflowName": "ci",
+                    "url": "https://example.invalid/ci",
+                }
+            )
+            self.assertEqual(result.returncode, 0, result.stdout)
+
+            local_identity = subprocess.run(
+                ["git", "config", "--local", "--get-regexp", "^user\\."],
+                cwd=fixture.root,
+                env=fixture.git_env,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
+            self.assertEqual(local_identity.returncode, 1, local_identity.stdout)
+            self.assertEqual(local_identity.stdout, "")
+        finally:
+            fixture.close()
+
+        self.assertEqual(repository_snapshot(), before)
 
 
 if __name__ == "__main__":
