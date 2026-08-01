@@ -50,6 +50,12 @@ First public version. `npm install`, three lines, a synthesizer.
 - Hand-written TypeScript declarations for the whole public surface.
 - Dual licensed MIT OR Apache-2.0.
 
+### Lifecycle
+
+- `createEngine({ connect: false })` supports caller-controlled routing through `engine.output` while retaining `engine.node`; `dispose()` frees the WASM engine, disconnects the node, and closes only library-owned contexts.
+- Notes and explicit `resume()` calls recover any non-running, non-closed context state, including WebKit's non-standard `interrupted` state.
+- Worklet-reported, message-deserialization, and processor errors reject engine creation or reach the runtime `onError` callback and browser console.
+
 ### Known limits
 
 - Recorded rather than hidden. PolyBLEP alias rejection degrades with pitch (−47 dB at

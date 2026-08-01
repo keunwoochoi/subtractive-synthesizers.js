@@ -60,6 +60,7 @@ closed-form specifications instead — see [Verification](#verification).
 | `wasmUrl?: string \| URL` | Override where the WASM is fetched from. Defaults to the packaged asset. |
 | `workletUrl?: string \| URL` | Override the worklet module URL. Defaults to inlined source via a Blob URL. |
 | `context?: BaseAudioContext` | Supply your own context — required for an OfflineAudioContext render. |
+| `connect?: boolean` | Connect the output to `context.destination`. Defaults to true; pass false for caller-controlled routing. |
 | `initialEvents?: ScheduledEvent[]` | Events applied at node construction. Required for offline rendering: an OfflineAudioContext can finish rendering without ever servicing the message port. |
 
 **`Engine`**
@@ -67,16 +68,19 @@ closed-form specifications instead — see [Verification](#verification).
 | member | meaning |
 |---|---|
 | `readonly context: BaseAudioContext` | The context the engine was created on — yours, or one it made. |
-| `readonly node: AudioWorkletNode` | The engine's output node, already connected to the destination. Tap it for meters or your own effects chain. |
+| `readonly node: AudioWorkletNode` | The engine's output node. Connected to the destination unless `connect: false` was requested. |
+| `readonly output: AudioWorkletNode` | Unambiguous output handle. This is the same AudioWorkletNode as `node`. |
 | `readonly voices: number` | Voices currently sounding. Updated ~10 times a second. |
 | `onStats?: (stats: { voices: number }) => void` | Called with engine stats as they arrive. |
-| `resume(): Promise<void>` | Resume a context the browser suspended. Safe to call from any user gesture. |
+| `onError?: (error: Error) => void` | Called when the worklet reports a runtime, message-deserialization, or processor error. |
+| `resume(): Promise<void>` | Resume any non-running, non-closed context state, including WebKit's `interrupted`. Safe to call from a user gesture. |
 | `noteOn(note: number, vel?: number): void` | Start a note now. `note` is MIDI (60 = middle C), `vel` is 0..1. |
 | `noteOff(note: number): void` | Release a note now; its amp release still rings out. |
 | `allOff(): void` | Release every sounding note, tails intact. |
 | `schedule(events: ScheduledEvent[]): void` | Queue events at absolute context times; applied on the exact frame. |
 | `clear(): void` | Drop everything pending and silence. |
 | `setParam(name: ParamName, value: number): void` | Set one patch parameter, effective on the next block. |
+| `dispose(): Promise<void>` | Free the WASM engine and disconnect its output. Idempotent; closes only a context the library created. |
 
 `PARAM` names 47 patch parameters, `SHAPE` the 3 waveforms and `FILTER` the 6 filter types. The authoritative list is [`index.d.ts`](packages/core/src/index.d.ts), which this table is generated from.
 <!-- /generated:api -->
@@ -87,11 +91,11 @@ closed-form specifications instead — see [Verification](#verification).
 | artifact | raw | gzipped |
 |---|---:|---:|
 | `packages/core/wasm/subtractive_dsp.wasm` | 76,064 B | 30,122 B |
-| `packages/core/src/index.js` | 5,178 B | 2,474 B |
-| `packages/core/worklet/processor.js` | 4,977 B | 1,991 B |
-| **total** | | **34,587 B (33.8 KB)** |
+| `packages/core/src/index.js` | 8,935 B | 3,338 B |
+| `packages/core/worklet/processor.js` | 5,793 B | 2,176 B |
+| **total** | | **35,636 B (34.8 KB)** |
 
-Budget is 60 KB gzipped for the whole library — currently **56%**.
+Budget is 60 KB gzipped for the whole library — currently **58%**.
 <!-- /generated:bundle -->
 
 ## Cost

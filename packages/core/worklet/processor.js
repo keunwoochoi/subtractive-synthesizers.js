@@ -12,7 +12,15 @@ class SubtractiveProcessor extends AudioWorkletProcessor {
     this.queue = [];
     this.cursor = 0;
     this.statFrames = 0;
-    this.port.onmessage = (e) => this.onMessage(e.data);
+    this.port.onmessage = (e) => {
+      try {
+        this.onMessage(e.data);
+      } catch (error) {
+        this.fail(error);
+      }
+    };
+    this.port.onmessageerror = () => this.fail(
+      new Error("message failed to deserialize in the AudioWorklet"));
 
     // Initialise from processorOptions when they are supplied, NOT from a port message.
     // An OfflineAudioContext renders to completion without necessarily servicing the
@@ -22,9 +30,17 @@ class SubtractiveProcessor extends AudioWorkletProcessor {
     // the node itself, before the first block.
     const opts = options?.processorOptions;
     if (opts?.bytes) {
-      this.boot(opts.bytes);
-      if (opts.events) this.onMessage({ type: "schedule", events: opts.events });
+      try {
+        this.boot(opts.bytes);
+        if (opts.events) this.onMessage({ type: "schedule", events: opts.events });
+      } catch (error) {
+        this.fail(error);
+      }
     }
+  }
+
+  fail(error) {
+    this.port.postMessage({ type: "error", message: String(error) });
   }
 
   boot(bytes) {
@@ -38,9 +54,23 @@ class SubtractiveProcessor extends AudioWorkletProcessor {
   }
 
   onMessage(msg) {
+    if (!msg || typeof msg.type !== "string") {
+      throw new TypeError("worklet message must be an object with a type");
+    }
     if (msg.type === "init") {
       if (!this.wasm) this.boot(msg.bytes);
       else this.port.postMessage({ type: "ready" });
+      return;
+    }
+    if (msg.type === "dispose") {
+      this.queue.length = 0;
+      this.cursor = 0;
+      if (this.engine) this.wasm.engine_free(this.engine);
+      this.engine = 0;
+      this.wasm = null;
+      this.viewL = null;
+      this.viewR = null;
+      this.port.postMessage({ type: "disposed" });
       return;
     }
     if (!this.wasm) return;
@@ -91,7 +121,7 @@ class SubtractiveProcessor extends AudioWorkletProcessor {
 
   process(_inputs, outputs) {
     const out = outputs[0];
-    if (!this.wasm || !out || out.length === 0) return true;
+    if (!this.engine || !out || out.length === 0) return true;
     const n = out[0].length;
 
     // Render in segments between event boundaries, so a note lands on the exact frame

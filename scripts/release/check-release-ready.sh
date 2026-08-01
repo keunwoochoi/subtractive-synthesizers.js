@@ -128,6 +128,7 @@ run() {  # run <label> <command...>
 run "harness audit"            scripts/audit/harness-audit.sh
 run "bundle size"              scripts/audit/bundle-size-audit.sh
 run "generated docs are current" python3 scripts/gen_docs.py --check
+run "engine lifecycle"         npm run --silent test:lifecycle
 
 if (( FULL )); then
   run "install from the tarball"  node scripts/dev/install-check.mjs

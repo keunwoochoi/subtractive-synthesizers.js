@@ -41,13 +41,17 @@ export interface ScheduledEvent {
 export interface Engine {
   /** The context the engine was created on — yours, or one it made. */
   readonly context: BaseAudioContext;
-  /** The engine's output node, already connected to the destination. Tap it for meters or your own effects chain. */
+  /** The engine's output node. Connected to the destination unless `connect: false` was requested. */
   readonly node: AudioWorkletNode;
+  /** Unambiguous output handle. This is the same AudioWorkletNode as `node`. */
+  readonly output: AudioWorkletNode;
   /** Voices currently sounding. Updated ~10 times a second. */
   readonly voices: number;
   /** Called with engine stats as they arrive. */
   onStats?: (stats: { voices: number }) => void;
-  /** Resume a context the browser suspended. Safe to call from any user gesture. */
+  /** Called when the worklet reports a runtime, message-deserialization, or processor error. */
+  onError?: (error: Error) => void;
+  /** Resume any non-running, non-closed context state, including WebKit's `interrupted`. Safe to call from a user gesture. */
   resume(): Promise<void>;
   /** Start a note now. `note` is MIDI (60 = middle C), `vel` is 0..1. */
   noteOn(note: number, vel?: number): void;
@@ -61,6 +65,8 @@ export interface Engine {
   clear(): void;
   /** Set one patch parameter, effective on the next block. */
   setParam(name: ParamName, value: number): void;
+  /** Free the WASM engine and disconnect its output. Idempotent; closes only a context the library created. */
+  dispose(): Promise<void>;
 }
 
 export interface CreateEngineOptions {
@@ -70,6 +76,8 @@ export interface CreateEngineOptions {
   workletUrl?: string | URL;
   /** Supply your own context — required for an OfflineAudioContext render. */
   context?: BaseAudioContext;
+  /** Connect the output to `context.destination`. Defaults to true; pass false for caller-controlled routing. */
+  connect?: boolean;
   /**
    * Events applied at node construction. Required for offline rendering: an
    * OfflineAudioContext can finish rendering without ever servicing the message port.

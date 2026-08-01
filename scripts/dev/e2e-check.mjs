@@ -68,6 +68,7 @@ try {
       if (!Number.isFinite(v)) { nonFinite++; continue; }
       const a = Math.abs(v); if (a > peak) peak = a; sum += v * v;
     }
+    await engine.dispose();
     return { peak, rms: Math.sqrt(sum / ch.length), nonFinite, frames: ch.length };
   }, { timeout: 20000 });
 
@@ -95,6 +96,7 @@ try {
     const tail = ch.subarray(ch.length - 4800);
     let tailPeak = 0;
     for (let i = 0; i < tail.length; i++) tailPeak = Math.max(tailPeak, Math.abs(tail[i]));
+    await engine.dispose();
     return { peak, tailPeak };
   }, { timeout: 20000 });
 
@@ -102,7 +104,37 @@ try {
   if (poly.peak > 1.0) fail(`chord clipped — peak ${poly.peak}`);
   if (poly.peak < 0.02) fail("chord was silent");
 
-  console.log("E2E OK — engine loads, sounds, holds 6 voices, stays inside full scale");
+  // Lifecycle behavior in real AudioWorklets, not only mocks: caller routing keeps a
+  // supplied context alive, disposal is repeatable, and an owned context is closed.
+  const lifecycle = await page.evaluate(async () => {
+    const { createEngine } = await import("../../packages/core/src/index.js");
+    const urls = {
+      wasmUrl: "../../packages/core/wasm/subtractive_dsp.wasm",
+      workletUrl: "../../packages/core/worklet/processor.js",
+    };
+    const supplied = new AudioContext();
+    const routed = await createEngine({ ...urls, context: supplied, connect: false });
+    const sameOutput = routed.output === routed.node;
+    const first = routed.dispose();
+    const sameDispose = first === routed.dispose();
+    await first;
+    const suppliedAfter = supplied.state;
+    if (supplied.state !== "closed") await supplied.close();
+
+    const owned = await createEngine({ ...urls, connect: false });
+    const ownedContext = owned.context;
+    await owned.dispose();
+    await owned.dispose();
+    return { sameOutput, sameDispose, suppliedAfter, ownedAfter: ownedContext.state };
+  }, { timeout: 20000 });
+
+  console.log("lifecycle:", JSON.stringify(lifecycle));
+  if (!lifecycle.sameOutput) fail("engine.output is not the engine.node compatibility handle");
+  if (!lifecycle.sameDispose) fail("repeated dispose calls did not share one operation");
+  if (lifecycle.suppliedAfter === "closed") fail("dispose closed a caller-owned context");
+  if (lifecycle.ownedAfter !== "closed") fail(`dispose left its owned context ${lifecycle.ownedAfter}`);
+
+  console.log("E2E OK — engine loads, sounds, holds 6 voices, stays inside full scale, and disposes cleanly");
 } finally {
   await browser.close();
   server.kill();
