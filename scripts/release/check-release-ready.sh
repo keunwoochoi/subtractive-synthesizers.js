@@ -73,10 +73,10 @@ fi
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 [[ "$BRANCH" == "main" ]] && ok "on main" || warn "on '$BRANCH', not main"
 
-if scripts/audit/check-ci.sh >/dev/null 2>&1; then
+if CI_RESULT=$(scripts/audit/check-ci.sh --require-green 2>&1); then
   ok "CI is green at HEAD ($(git rev-parse --short HEAD))"
 else
-  bad "CI is not green at HEAD"
+  bad "${CI_RESULT:-CI is not green at HEAD}"
 fi
 
 # ------------------------------------------------------------------------- identity

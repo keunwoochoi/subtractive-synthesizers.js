@@ -40,6 +40,10 @@ echo "== proving the audit can fail =="
 run_tests scripts/audit/test_harness_audit.py
 
 echo
+echo "== proving the release CI gate fails closed =="
+run_tests scripts/release/test_check_ci.py
+
+echo
 echo "== proving verify-spec rejects cheats =="
 run_tests scripts/verify/test_verify_spec.py
 
