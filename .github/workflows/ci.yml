@@ -50,6 +50,12 @@ jobs:
       - name: Harness audit (identity, fixtures, intents, generated docs, referents)
         run: scripts/audit/harness-audit.sh
 
+      - name: Strict installed TypeScript consumer
+        run: npm run check:types
+
+      - name: Published package metadata and declarations
+        run: npm run check:package
+
   e2e:
     runs-on: ubuntu-24.04
     steps:

@@ -76,7 +76,8 @@ try {
   const installed = join(work, "node_modules/subtractive-synthesizers.js");
   const shipped = readdirSync(join(installed, "dist"));
   console.log("shipped dist/:", shipped.join(", "));
-  for (const need of ["index.js", "index.d.ts", "presets.js", "presets.d.ts", "wasm"]) {
+  for (const need of ["index.js", "index.d.ts", "parameters.js", "parameters.d.ts",
+                      "presets.js", "presets.d.ts", "wasm"]) {
     if (!shipped.includes(need)) fail(`dist/${need} was not published (check "files")`);
   }
   // The package ROOT, not just dist/. "files" listed README.md and both licences, and npm

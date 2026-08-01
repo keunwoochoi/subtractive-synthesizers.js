@@ -10,12 +10,18 @@
     "./presets": { "types": "./dist/presets.d.ts", "default": "./dist/presets.js" },
     "./wasm": "./dist/wasm/subtractive_dsp.wasm"
   },
+  "engines": { "node": ">=18" },
   "files": ["dist", "README.md", "LICENSE-MIT", "LICENSE-APACHE"],
   "scripts": { "build": "node scripts/build.mjs" },
   "keywords": [
     "synthesizer", "synth", "subtractive", "analog", "audio", "webaudio",
     "audioworklet", "wasm", "dsp", "filter", "oscillator", "music"
   ],
-  "repository": { "type": "git", "url": "git+https://github.com/keunwoochoi/subtractive-synthesizers.js.git" },
-  "homepage": "https://github.com/keunwoochoi/subtractive-synthesizers.js"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/keunwoochoi/subtractive-synthesizers.js.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://keunwoochoi.github.io/subtractive-synthesizers.js/apps/playground/showcase.html",
+  "bugs": { "url": "https://github.com/keunwoochoi/subtractive-synthesizers.js/issues" }
 }

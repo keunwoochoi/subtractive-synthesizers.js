@@ -1,28 +1,6 @@
-/** Patch parameter names accepted by `Engine.setParam`. */
-export type ParamName =
-  | "shape" | "pulseWidth" | "detuneCents" | "subLevel" | "noiseLevel"
-  | "cutoffHz" | "resonance" | "drive" | "envAmount" | "keyTrack"
-  | "ampAttack" | "ampDecay" | "ampSustain" | "ampRelease"
-  | "fltAttack" | "fltDecay" | "fltSustain" | "fltRelease"
-  | "velToCutoff" | "gain"
-  | "chorusRate" | "chorusDepth" | "chorusMix"
-  | "delayMix" | "delayTime" | "delayFeedback" | "delayTone"
-  | "reverbMix" | "reverbSize" | "reverbDamp" | "reverbPredelay"
-  | "unison" | "glide"
-  | "lfoRate" | "lfoToPitch" | "lfoToCutoff" | "lfoToPwm"
-  | "filterKind" | "stereoWidth" | "syncRatio"
-  | "pitchEnvAmount" | "pitchEnvDecay"
-  | "lfo2Rate" | "lfo2ToCutoff" | "lfo2ToPitch" | "noiseColor" | "oscLevel";
-
-export declare const PARAM: Record<ParamName, number>;
-
-/** Oscillator waveforms. */
-export declare const SHAPE: { saw: 0; pulse: 1; triangle: 2 };
-
-/** Filter types. Two 4-pole lowpass characters, then the state-variable outputs. */
-export declare const FILTER: {
-  ladderLp: 0; diodeLp: 1; svfLp: 2; svfBp: 3; svfHp: 4; svfNotch: 5;
-};
+import type { ParamName } from "./parameters.js";
+export { FILTER, PARAM, PARAMETERS, SHAPE } from "./parameters.js";
+export type { ParameterDefinition, ParamName } from "./parameters.js";
 
 /** An event applied at an absolute AudioContext time. */
 export interface ScheduledEvent {

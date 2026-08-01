@@ -72,5 +72,11 @@ echo "== generated docs match their measurements =="
 python3 scripts/gen_docs.py --check
 
 echo
+echo "== public parameter metadata and npm README fail correctly =="
+node --test scripts/verify/test_parameters.mjs scripts/verify/test_npm_readme.mjs
+node scripts/gen_parameters.mjs --check
+node scripts/verify/check_npm_readme.mjs
+
+echo
 echo "== auditing the repo =="
 python3 scripts/audit/harness_audit.py

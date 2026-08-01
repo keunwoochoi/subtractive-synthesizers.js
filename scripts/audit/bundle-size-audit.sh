@@ -28,7 +28,11 @@ fi
 
 # Reproducible across platforms; `gzip -9` is not. See scripts/audit/gzsize.py.
 gz() { python3 scripts/audit/gzsize.py "$1"; }
-PARTS=("$SHIPPED" packages/core/src/index.js packages/core/worklet/processor.js)
+# The quickstart imports both public entry points, and index.js imports the parameter
+# metadata. Omitting either file would let generated docs claim an engine-only size for
+# a package whose curated presets and documented controls are part of the product.
+PARTS=("$SHIPPED" packages/core/src/index.js packages/core/src/parameters.js \
+       packages/core/src/presets.js packages/core/worklet/processor.js)
 
 total=0
 printf '%-44s %10s %10s\n' file raw gz

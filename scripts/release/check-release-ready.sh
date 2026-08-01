@@ -105,7 +105,8 @@ else
   printf '%s\n' "$FILES" | sed 's/^/        /'
   ok "$COUNT files, $(( SIZE / 1024 )) KB unpacked"
 
-  for need in dist/index.js dist/index.d.ts dist/presets.js dist/presets.d.ts \
+  for need in dist/index.js dist/index.d.ts dist/parameters.js dist/parameters.d.ts \
+              dist/presets.js dist/presets.d.ts \
               dist/wasm/subtractive_dsp.wasm README.md LICENSE-MIT LICENSE-APACHE; do
     grep -qx "$need" <<<"$FILES" || bad "the tarball is missing $need"
   done
@@ -138,6 +139,11 @@ run() {  # run <label> <command...>
 run "harness audit"            scripts/audit/harness-audit.sh
 run "bundle size"              scripts/audit/bundle-size-audit.sh
 run "generated docs are current" python3 scripts/gen_docs.py --check
+run "npm README is release-accurate" node scripts/verify/check_npm_readme.mjs
+run "parameter metadata and consumers" npm run --silent test:parameters
+run "strict installed TypeScript" node scripts/verify/check_types.mjs
+run "publint" npx --no-install publint packages/core
+run "Are the Types Wrong (ESM entry points)" npx --no-install attw --pack packages/core --profile esm-only --exclude-entrypoints ./wasm
 run "engine lifecycle"         npm run --silent test:lifecycle
 
 if (( FULL )); then

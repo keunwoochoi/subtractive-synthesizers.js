@@ -11,12 +11,14 @@
     "test:harness": "python3 scripts/audit/test_harness_audit.py",
     "test:release": "python3 scripts/release/test_check_ci.py",
     "test:lifecycle": "node --test scripts/verify/test_lifecycle.mjs",
+    "test:parameters": "node scripts/gen_parameters.mjs --check && node --test scripts/verify/test_parameters.mjs",
+    "test:npm-readme": "node --test scripts/verify/test_npm_readme.mjs && node scripts/verify/check_npm_readme.mjs",
     "verify:spec": "python3 scripts/verify/verify_spec.py",
     "test:verify": "python3 scripts/verify/test_verify_spec.py",
     "check:intents": "python3 scripts/verify/check_intents.py",
     "build:wasm": "cargo build -p subtractive-dsp --target wasm32-unknown-unknown --release && cp target/wasm32-unknown-unknown/release/subtractive_dsp.wasm packages/core/wasm/",
-    "docs": "python3 scripts/gen_docs.py",
-    "docs:check": "python3 scripts/gen_docs.py --check",
+    "docs": "node scripts/gen_parameters.mjs && python3 scripts/gen_docs.py",
+    "docs:check": "node scripts/gen_parameters.mjs --check && python3 scripts/gen_docs.py --check",
     "e2e": "node scripts/dev/e2e-check.mjs",
     "dev": "scripts/dev/serve.sh",
     "verify:engine": "node scripts/verify/check_engine.mjs",
@@ -29,9 +31,14 @@
     "check:audio": "node scripts/dev/playground-audio-check.mjs",
     "check:bundlers": "node scripts/dev/bundler-check.mjs",
     "check:quickstart": "node scripts/verify/check_quickstart.mjs",
+    "check:types": "node scripts/verify/check_types.mjs",
+    "check:package": "npm run build && publint packages/core && attw --pack packages/core --profile esm-only --exclude-entrypoints ./wasm",
     "check:release": "scripts/release/check-release-ready.sh"
   },
   "devDependencies": {
-    "playwright": "^1.62.0"
+    "@arethetypeswrong/cli": "^0.18.5",
+    "playwright": "^1.62.0",
+    "publint": "^0.3.22",
+    "typescript": "^5.9.3"
   }
 }

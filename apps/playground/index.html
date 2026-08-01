@@ -146,44 +146,36 @@
       <div class="panel audio">
         <h2>Oscillator</h2>
         <div class="row"><label>shape</label>
-          <select id="shape"><option value="0">saw</option><option value="1">pulse</option>
-          <option value="2">triangle</option></select></div>
-        <div class="row"><label>unison</label><input type="range" id="unison" data-param min="1" max="7" step="1" value="2"><output>2</output></div>
-        <div class="row"><label>detune</label><input type="range" id="detuneCents" data-param min="0" max="40" step="0.5" value="8"><output>8</output></div>
-        <div class="row"><label>pulse w</label><input type="range" id="pulseWidth" data-param min="0.05" max="0.95" step="0.01" value="0.5"><output>0.50</output></div>
-        <div class="row"><label>osc</label><input type="range" id="oscLevel" data-param min="0" max="1" step="0.01" value="1"><output>1.00</output></div>
-        <div class="row"><label>sub</label><input type="range" id="subLevel" data-param min="0" max="1" step="0.01" value="0.35"><output>0.35</output></div>
-        <div class="row"><label>noise</label><input type="range" id="noiseLevel" data-param min="0" max="1" step="0.01" value="0"><output>0.00</output></div>
-        <div class="row"><label>white → pink</label><input type="range" id="noiseColor" data-param min="0" max="1" step="0.01" value="0"><output>0.00</output></div>
-        <div class="row"><label>sync</label><input type="range" id="syncRatio" data-param min="1" max="8" step="0.05" value="1"><output>1.00</output></div>
-        <div class="row"><label>width</label><input type="range" id="stereoWidth" data-param min="0" max="1" step="0.01" value="0.7"><output>0.70</output></div>
-        <div class="row"><label>glide</label><input type="range" id="glide" data-param min="0" max="0.4" step="0.005" value="0"><output>0.00</output></div>
+          <select id="shape" data-param></select></div>
+        <div class="row"><label>unison</label><input type="range" id="unison" data-param><output></output></div>
+        <div class="row"><label>detune</label><input type="range" id="detuneCents" data-param><output></output></div>
+        <div class="row"><label>pulse w</label><input type="range" id="pulseWidth" data-param><output></output></div>
+        <div class="row"><label>osc</label><input type="range" id="oscLevel" data-param><output></output></div>
+        <div class="row"><label>sub</label><input type="range" id="subLevel" data-param><output></output></div>
+        <div class="row"><label>noise</label><input type="range" id="noiseLevel" data-param><output></output></div>
+        <div class="row"><label>white → pink</label><input type="range" id="noiseColor" data-param><output></output></div>
+        <div class="row"><label>sync</label><input type="range" id="syncRatio" data-param><output></output></div>
+        <div class="row"><label>width</label><input type="range" id="stereoWidth" data-param><output></output></div>
+        <div class="row"><label>glide</label><input type="range" id="glide" data-param><output></output></div>
       </div>
 
       <div class="panel audio">
         <h2>Filter</h2>
         <p class="to">where the character is — driven by <b>filter env</b>, <b>LFO</b>, <b>velocity</b></p>
         <div class="row"><label>type</label>
-          <select id="filterKind">
-            <option value="0">ladder LP · 24 dB</option>
-            <option value="1">diode LP · acid</option>
-            <option value="2">SVF LP · 12 dB</option>
-            <option value="3">SVF bandpass</option>
-            <option value="4">SVF highpass</option>
-            <option value="5">SVF notch</option>
-          </select></div>
-        <div class="row"><label>cutoff</label><input type="range" id="cutoffHz" data-param min="60" max="8000" step="10" value="1200"><output>1200</output></div>
-        <div class="row"><label>resonance</label><input type="range" id="resonance" data-param min="0" max="1" step="0.01" value="0.35"><output>0.35</output></div>
-        <div class="row"><label>drive</label><input type="range" id="drive" data-param min="0.5" max="4" step="0.05" value="1.2"><output>1.20</output></div>
-        <div class="row"><label>env amt</label><input type="range" id="envAmount" data-param min="0" max="8000" step="50" value="3200"><output>3200</output></div>
-        <div class="row"><label>vel amt</label><input type="range" id="velToCutoff" data-param min="0" max="6000" step="50" value="2400"><output>2400</output></div>
-        <div class="row"><label>key trk</label><input type="range" id="keyTrack" data-param min="0" max="1" step="0.01" value="0.35"><output>0.35</output></div>
+          <select id="filterKind" data-param></select></div>
+        <div class="row"><label>cutoff</label><input type="range" id="cutoffHz" data-param><output></output></div>
+        <div class="row"><label>resonance</label><input type="range" id="resonance" data-param><output></output></div>
+        <div class="row"><label>drive</label><input type="range" id="drive" data-param><output></output></div>
+        <div class="row"><label>env amt</label><input type="range" id="envAmount" data-param><output></output></div>
+        <div class="row"><label>vel amt</label><input type="range" id="velToCutoff" data-param><output></output></div>
+        <div class="row"><label>key trk</label><input type="range" id="keyTrack" data-param><output></output></div>
       </div>
 
       <div class="panel audio">
         <h2>Amp</h2>
         <p class="to">final level — driven by <b>amp env</b> and velocity</p>
-        <div class="row"><label>output</label><input type="range" id="gain" data-param min="0" max="0.8" step="0.01" value="0.35"><output>0.35</output></div>
+        <div class="row"><label>output</label><input type="range" id="gain" data-param><output></output></div>
       </div>
     </div>
   </div>
@@ -194,43 +186,43 @@
       <div class="panel mod">
         <h2>Filter envelope</h2>
         <p class="to">→ <b>cutoff</b>, scaled by the filter's <b>env amt</b></p>
-        <div class="row"><label>attack</label><input type="range" id="fltAttack" data-param min="0.001" max="2" step="0.001" value="0.002"><output>0.002</output></div>
-        <div class="row"><label>decay</label><input type="range" id="fltDecay" data-param min="0.005" max="2" step="0.005" value="0.35"><output>0.35</output></div>
-        <div class="row"><label>sustain</label><input type="range" id="fltSustain" data-param min="0" max="1" step="0.01" value="0.3"><output>0.30</output></div>
-        <div class="row"><label>release</label><input type="range" id="fltRelease" data-param min="0.005" max="3" step="0.005" value="0.25"><output>0.25</output></div>
+        <div class="row"><label>attack</label><input type="range" id="fltAttack" data-param><output></output></div>
+        <div class="row"><label>decay</label><input type="range" id="fltDecay" data-param><output></output></div>
+        <div class="row"><label>sustain</label><input type="range" id="fltSustain" data-param><output></output></div>
+        <div class="row"><label>release</label><input type="range" id="fltRelease" data-param><output></output></div>
       </div>
 
       <div class="panel mod">
         <h2>Amp envelope</h2>
         <p class="to">→ <b>VCA</b> — the shape of a note in time</p>
-        <div class="row"><label>attack</label><input type="range" id="ampAttack" data-param min="0.001" max="2" step="0.001" value="0.005"><output>0.005</output></div>
-        <div class="row"><label>decay</label><input type="range" id="ampDecay" data-param min="0.005" max="2" step="0.005" value="0.2"><output>0.20</output></div>
-        <div class="row"><label>sustain</label><input type="range" id="ampSustain" data-param min="0" max="1" step="0.01" value="0.75"><output>0.75</output></div>
-        <div class="row"><label>release</label><input type="range" id="ampRelease" data-param min="0.005" max="3" step="0.005" value="0.25"><output>0.25</output></div>
+        <div class="row"><label>attack</label><input type="range" id="ampAttack" data-param><output></output></div>
+        <div class="row"><label>decay</label><input type="range" id="ampDecay" data-param><output></output></div>
+        <div class="row"><label>sustain</label><input type="range" id="ampSustain" data-param><output></output></div>
+        <div class="row"><label>release</label><input type="range" id="ampRelease" data-param><output></output></div>
       </div>
 
       <div class="panel mod">
         <h2>Pitch envelope</h2>
         <p class="to">→ <b>pitch</b>, once per note</p>
-        <div class="row"><label>amount</label><input type="range" id="pitchEnvAmount" data-param min="-36" max="36" step="1" value="0"><output>0</output></div>
-        <div class="row"><label>decay</label><input type="range" id="pitchEnvDecay" data-param min="0.005" max="1" step="0.005" value="0.08"><output>0.08</output></div>
+        <div class="row"><label>amount</label><input type="range" id="pitchEnvAmount" data-param><output></output></div>
+        <div class="row"><label>decay</label><input type="range" id="pitchEnvDecay" data-param><output></output></div>
       </div>
 
       <div class="panel mod">
         <h2>LFO 2 · per note</h2>
         <p class="to">→ <b>cutoff</b>, <b>pitch</b> — restarts on every note</p>
-        <div class="row"><label>rate</label><input type="range" id="lfo2Rate" data-param min="0.05" max="16" step="0.05" value="3"><output>3.00</output></div>
-        <div class="row"><label>→ cutoff</label><input type="range" id="lfo2ToCutoff" data-param min="0" max="4000" step="25" value="0"><output>0</output></div>
-        <div class="row"><label>→ pitch</label><input type="range" id="lfo2ToPitch" data-param min="0" max="12" step="0.1" value="0"><output>0.0</output></div>
+        <div class="row"><label>rate</label><input type="range" id="lfo2Rate" data-param><output></output></div>
+        <div class="row"><label>→ cutoff</label><input type="range" id="lfo2ToCutoff" data-param><output></output></div>
+        <div class="row"><label>→ pitch</label><input type="range" id="lfo2ToPitch" data-param><output></output></div>
       </div>
 
       <div class="panel mod">
         <h2>LFO 1 · shared</h2>
         <p class="to">→ <b>pitch</b>, <b>cutoff</b>, <b>pulse width</b> — free-running</p>
-        <div class="row"><label>rate</label><input type="range" id="lfoRate" data-param min="0.05" max="16" step="0.05" value="5"><output>5.00</output></div>
-        <div class="row"><label>→ pitch</label><input type="range" id="lfoToPitch" data-param min="0" max="60" step="1" value="0"><output>0</output></div>
-        <div class="row"><label>→ cutoff</label><input type="range" id="lfoToCutoff" data-param min="0" max="3000" step="25" value="0"><output>0</output></div>
-        <div class="row"><label>→ pulse w</label><input type="range" id="lfoToPwm" data-param min="0" max="0.45" step="0.01" value="0"><output>0.00</output></div>
+        <div class="row"><label>rate</label><input type="range" id="lfoRate" data-param><output></output></div>
+        <div class="row"><label>→ pitch</label><input type="range" id="lfoToPitch" data-param><output></output></div>
+        <div class="row"><label>→ cutoff</label><input type="range" id="lfoToCutoff" data-param><output></output></div>
+        <div class="row"><label>→ pulse w</label><input type="range" id="lfoToPwm" data-param><output></output></div>
       </div>
     </div>
   </div>
@@ -240,23 +232,23 @@
     <div class="panels">
       <div class="panel fx">
         <h2>Chorus</h2>
-        <div class="row"><label>mix</label><input type="range" id="chorusMix" data-param min="0" max="1" step="0.01" value="0"><output>0.00</output></div>
-        <div class="row"><label>rate</label><input type="range" id="chorusRate" data-param min="0.05" max="6" step="0.01" value="0.6"><output>0.60</output></div>
-        <div class="row"><label>depth</label><input type="range" id="chorusDepth" data-param min="0" max="12" step="0.1" value="3"><output>3.0</output></div>
+        <div class="row"><label>mix</label><input type="range" id="chorusMix" data-param><output></output></div>
+        <div class="row"><label>rate</label><input type="range" id="chorusRate" data-param><output></output></div>
+        <div class="row"><label>depth</label><input type="range" id="chorusDepth" data-param><output></output></div>
       </div>
       <div class="panel fx">
         <h2>Delay</h2>
-        <div class="row"><label>mix</label><input type="range" id="delayMix" data-param min="0" max="1" step="0.01" value="0"><output>0.00</output></div>
-        <div class="row"><label>time</label><input type="range" id="delayTime" data-param min="0.02" max="1" step="0.005" value="0.25"><output>0.25</output></div>
-        <div class="row"><label>feedback</label><input type="range" id="delayFeedback" data-param min="0" max="0.92" step="0.01" value="0.35"><output>0.35</output></div>
-        <div class="row"><label>tone</label><input type="range" id="delayTone" data-param min="400" max="16000" step="100" value="3200"><output>3200</output></div>
+        <div class="row"><label>mix</label><input type="range" id="delayMix" data-param><output></output></div>
+        <div class="row"><label>time</label><input type="range" id="delayTime" data-param><output></output></div>
+        <div class="row"><label>feedback</label><input type="range" id="delayFeedback" data-param><output></output></div>
+        <div class="row"><label>tone</label><input type="range" id="delayTone" data-param><output></output></div>
       </div>
       <div class="panel fx">
         <h2>Reverb</h2>
-        <div class="row"><label>mix</label><input type="range" id="reverbMix" data-param min="0" max="1" step="0.01" value="0"><output>0.00</output></div>
-        <div class="row"><label>size</label><input type="range" id="reverbSize" data-param min="0" max="1" step="0.01" value="0.6"><output>0.60</output></div>
-        <div class="row"><label>damping</label><input type="range" id="reverbDamp" data-param min="800" max="14000" step="100" value="4200"><output>4200</output></div>
-        <div class="row"><label>predelay</label><input type="range" id="reverbPredelay" data-param min="0" max="100" step="1" value="18"><output>18</output></div>
+        <div class="row"><label>mix</label><input type="range" id="reverbMix" data-param><output></output></div>
+        <div class="row"><label>size</label><input type="range" id="reverbSize" data-param><output></output></div>
+        <div class="row"><label>damping</label><input type="range" id="reverbDamp" data-param><output></output></div>
+        <div class="row"><label>predelay</label><input type="range" id="reverbPredelay" data-param><output></output></div>
       </div>
     </div>
   </div>
@@ -295,8 +287,34 @@
 
 <script type="module">
 
-import { createEngine, PARAM } from "../../packages/core/src/index.js";
+import { createEngine, PARAMETERS } from "../../packages/core/src/index.js";
 import { PRESETS, DEFAULTS, GROUPS } from "../../packages/core/src/presets.js";
+
+const FILTER_LABELS = {
+  ladderLp: "ladder LP · 24 dB", diodeLp: "diode LP · acid", svfLp: "SVF LP · 12 dB",
+  svfBp: "SVF bandpass", svfHp: "SVF highpass", svfNotch: "SVF notch",
+};
+
+// Parameter controls carry ids and layout only. Their bounds, increments, defaults, and
+// enum values come from the same exported metadata that owns the public API and docs.
+for (const el of document.querySelectorAll("[data-param]")) {
+  const definition = PARAMETERS[el.id];
+  if (!definition) throw new Error(`playground control has unknown parameter: ${el.id}`);
+  if (el.type === "range") {
+    el.min = String(definition.min);
+    el.max = String(definition.editorMax ?? definition.max);
+    el.step = String(definition.step);
+    el.value = String(definition.default);
+  } else if (el.tagName === "SELECT" && definition.values) {
+    for (const [name, value] of Object.entries(definition.values)) {
+      const option = document.createElement("option");
+      option.value = String(value);
+      option.textContent = FILTER_LABELS[name] ?? name;
+      el.appendChild(option);
+    }
+    el.value = String(definition.default);
+  }
+}
 
 const LOW = 48, N_KEYS = 25;
 // The tracker/DAW layout: white keys along the home row, black keys on the row above.
@@ -521,6 +539,10 @@ function loadPreset(key) {
     engine?.setParam(name, value);
     const el = document.getElementById(name);
     if (!el) continue;                    // parameter with no control on this page
+    if (el.type === "range") {
+      const definition = PARAMETERS[name];
+      el.max = String(Math.max(definition.editorMax ?? definition.max, value));
+    }
     el.value = String(value);
     // Range controls carry a readout that does not update on a programmatic write.
     if (el.type === "range") el.dispatchEvent(new Event("input", { bubbles: true }));

@@ -11,14 +11,22 @@
 //
 // Measured cost: +40 bytes gzipped. The WASM is NOT inlined -- that costs +10,743 B gz,
 // 38 % of the whole budget, to serve a case `wasmUrl` already covers.
+import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync, mkdirSync, copyFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const pkg = join(here, "..");
+const root = join(pkg, "../..");
 const dist = join(pkg, "dist");
 mkdirSync(dist, { recursive: true });
+
+// A direct package build must not ship a declaration generated from old metadata.
+execFileSync(process.execPath, [join(root, "scripts/gen_parameters.mjs"), "--check"], {
+  cwd: root,
+  stdio: "ignore",
+});
 
 const worklet = readFileSync(join(pkg, "worklet/processor.js"), "utf8");
 const src = readFileSync(join(pkg, "src/index.js"), "utf8");
@@ -60,6 +68,8 @@ if (out.includes("worklet/processor.js")) {
 
 writeFileSync(join(dist, "index.js"), out);
 copyFileSync(join(pkg, "src/index.d.ts"), join(dist, "index.d.ts"));
+copyFileSync(join(pkg, "src/parameters.js"), join(dist, "parameters.js"));
+copyFileSync(join(pkg, "src/parameters.d.ts"), join(dist, "parameters.d.ts"));
 copyFileSync(join(pkg, "src/presets.js"), join(dist, "presets.js"));
 copyFileSync(join(pkg, "src/presets.d.ts"), join(dist, "presets.d.ts"));
 mkdirSync(join(dist, "wasm"), { recursive: true });
@@ -73,7 +83,6 @@ copyFileSync(join(pkg, "wasm/subtractive_dsp.wasm"), join(dist, "wasm/subtractiv
 //
 // Copied at build time rather than duplicated in the tree: the repo root owns all three,
 // and the copies are gitignored, so there is still exactly one editable original.
-const root = join(pkg, "../..");
 for (const f of ["README.md", "LICENSE-MIT", "LICENSE-APACHE"]) {
   copyFileSync(join(root, f), join(pkg, f));
 }

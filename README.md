@@ -1,26 +1,21 @@
 <p align="center">
-  <img src="assets/logo/logo-256.png" width="140" alt="subtractive-synthesizers.js — [-] tile-mosaic logo">
+  <img src="https://raw.githubusercontent.com/keunwoochoi/subtractive-synthesizers.js/main/assets/logo/logo-256.png" width="140" alt="subtractive-synthesizers.js — [-] tile-mosaic logo">
 </p>
 
 # subtractive-synthesizers.js
 
-A subtractive synthesizer for the browser. All sound is computed at runtime in an
-AudioWorklet; the package contains no audio samples and makes no network requests.
+<!-- generated:product-summary -->
+A browser subtractive synthesizer with 41 curated patches and 47 documented controls. Audio is synthesized at runtime in a WebAssembly AudioWorklet; the package contains no samples and needs no network access while playing.
+<!-- /generated:product-summary -->
 
-> **Status: pre-alpha**, not yet published to npm. Currently implemented: an
-> antialiased oscillator, a zero-delay-feedback ladder filter with per-voice
-> analog drift, and 16-voice polyphony, in one AudioWorklet.
+<!-- generated:package-status -->
+> **Release status:** This checkout carries pre-release manifest version `0.1.0-draft.0`. The install command below is the intended registry path after the owner authorizes the first publish; the live demos remain available now.
+<!-- /generated:package-status -->
 
-## Demo
-
-- **<https://keunwoochoi.github.io/subtractive-synthesizers.js/apps/playground/showcase.html>** — showcase: plays the patch bank
-- **<https://keunwoochoi.github.io/subtractive-synthesizers.js/apps/playground/index.html>** — playground: parameter panel and keyboard
-
-Served by GitHub Pages from `main`. To run locally instead:
+## Install
 
 ```sh
-cargo build -p subtractive-dsp --target wasm32-unknown-unknown --release
-scripts/dev/serve.sh start   # same pages at http://127.0.0.1:8291/, stop with serve.sh stop
+npm install subtractive-synthesizers.js
 ```
 
 <!-- generated:quickstart -->
@@ -34,21 +29,40 @@ engine.noteOn(60, 0.9);
 ```
 <!-- /generated:quickstart -->
 
-The worklet is inlined and served from a Blob URL, and the WASM resolves through
-`new URL(..., import.meta.url)`, so Vite, webpack 5 and Rollup handle the package
-without configuration. Three checks back this up: `scripts/dev/install-check.mjs`
-packs the package, installs it into a clean project and renders sound from it
-(every other check runs against the source tree, where paths line up regardless);
-the snippet above is generated from `examples/quickstart.js`, which
-`scripts/verify/check_quickstart.mjs` runs against the installed package on every
-CI build; and `scripts/dev/bundler-check.mjs` builds the library inside Vite,
-webpack and Next apps.
+Call `createEngine()` from a user gesture because browsers control when audio may start. The engine resolves its packaged WASM and inlined worklet itself, and `applyPreset()` sends a complete patch so no state carries over from the previous sound.
 
-Second library in the `sets-of-instruments-js` family.
-[`physical-instruments.js`](https://github.com/keunwoochoi/physical-instruments.js) models
-acoustic instruments and is evaluated against recordings of them. A subtractive
-synthesizer has no acoustic reference, so this repository verifies against
-closed-form specifications instead — see [Verification](#verification).
+## Demo
+
+- **[Showcase](https://keunwoochoi.github.io/subtractive-synthesizers.js/apps/playground/showcase.html)** — hear the curated patch bank.
+- **[Playground](https://keunwoochoi.github.io/subtractive-synthesizers.js/apps/playground/index.html)** — play a keyboard and edit every public parameter.
+- **[Changelog](https://github.com/keunwoochoi/subtractive-synthesizers.js/blob/main/CHANGELOG.md)** — user-visible changes toward the first release.
+
+## What is included
+
+- PolyBLEP saw, pulse/PWM, and triangle oscillators; a sub oscillator; hard sync; white-to-pink noise; stereo unison; drift; portamento; a pitch envelope; and oversampling.
+- Two nonlinear lowpass characters plus state-variable lowpass, bandpass, highpass, and notch filters.
+- Separate amplitude and filter ADSR envelopes, velocity and keyboard tracking, one shared LFO, and one per-voice retriggered LFO.
+- Ensemble chorus, ping-pong delay with tone control, and stereo feedback-delay-network reverb.
+- A curated, measured patch bank with explicit intent provenance rather than a sample download or external asset service.
+
+<!-- generated:roster -->
+| group | patches |
+|---|---:|
+| pad | 12 |
+| lead | 10 |
+| pluck | 8 |
+| bass | 7 |
+| brass | 4 |
+| **total** | **41** |
+<!-- /generated:roster -->
+
+## Compatibility and lifecycle
+
+The ESM imports are SSR-safe: importing the package does not touch `window` or construct an `AudioContext`. Packed-package checks install the tarball into clean projects and render audio in Chromium and Playwright WebKit; separate fixtures build it without library-specific configuration in Vite, webpack 5, and Next.
+
+`createEngine({ context })` shares a caller-owned `BaseAudioContext`, while `createEngine({ connect: false })` leaves `engine.output` unconnected for caller-controlled routing. `engine.resume()` recovers any non-running, non-closed context state, including WebKit's `interrupted` state. `engine.dispose()` is idempotent, frees the worklet's WASM engine, disconnects output, and closes only a context created by the library. Construction failures reject `createEngine()`; later worklet, processor, and message errors reach `engine.onError` and the console.
+
+No CDN, sample, or network request is made while playing. The only runtime fetch is the WASM file installed with the package unless the caller supplies `wasmUrl`; the worklet is inlined into the JavaScript build.
 
 ## API
 
@@ -82,8 +96,74 @@ closed-form specifications instead — see [Verification](#verification).
 | `setParam(name: ParamName, value: number): void` | Set one patch parameter, effective on the next block. |
 | `dispose(): Promise<void>` | Free the WASM engine and disconnect its output. Idempotent; closes only a context the library created. |
 
-`PARAM` names 47 patch parameters, `SHAPE` the 3 waveforms and `FILTER` the 6 filter types. The authoritative list is [`index.d.ts`](packages/core/src/index.d.ts), which this table is generated from.
+`PARAMETERS` is the authoritative metadata for all 47 controls; `PARAM`, `SHAPE`, `FILTER`, preset defaults, declarations, the playground, and the parameter table below derive from it.
 <!-- /generated:api -->
+
+For deterministic offline rendering, pass an `OfflineAudioContext` and `initialEvents` to `createEngine()`, then call `context.startRendering()`. A live engine instead accepts `noteOn()`, `noteOff()`, `schedule()`, and `setParam()` messages after construction.
+
+## Parameters
+
+`PARAMETERS` is exported from the main entry point and is the source of every parameter id, preset-reset default, supported range, increment, unit, and enum value. `DEFAULTS` from `subtractive-synthesizers.js/presets` is generated from the same definitions. Presets merge their partial overrides over those defaults before applying all controls. Values outside the supported range are not part of the public contract. An optional `editorMax` is a preferred slider ceiling for fine control; the playground expands it when a loaded preset uses a larger supported value.
+
+<!-- generated:parameters -->
+| parameter | id | preset default | supported range | step | unit / values |
+|---|---:|---:|---:|---:|---|
+| `shape` | 0 | 0 | 0 … 2 | 1 | `saw` = 0, `pulse` = 1, `triangle` = 2 |
+| `filterKind` | 37 | 0 | 0 … 5 | 1 | `ladderLp` = 0, `diodeLp` = 1, `svfLp` = 2, `svfBp` = 3, `svfHp` = 4, `svfNotch` = 5 |
+| `unison` | 31 | 2 | 1 … 7 | 1 | voices |
+| `detuneCents` | 2 | 8 | 0 … 1400 | 0.5 | cents |
+| `pulseWidth` | 1 | 0.5 | 0.05 … 0.95 | 0.01 | ratio |
+| `subLevel` | 3 | 0.25 | 0 … 1 | 0.01 | linear gain |
+| `noiseLevel` | 4 | 0 | 0 … 1 | 0.01 | linear gain |
+| `glide` | 32 | 0 | 0 … 0.4 | 0.005 | seconds |
+| `cutoffHz` | 5 | 1200 | 60 … 8000 | 10 | Hz |
+| `resonance` | 6 | 0.3 | 0 … 1 | 0.01 | ratio |
+| `drive` | 7 | 1.2 | 0.5 … 4 | 0.05 | times |
+| `envAmount` | 8 | 2400 | 0 … 8000 | 50 | Hz |
+| `keyTrack` | 9 | 0.35 | 0 … 1 | 0.01 | ratio |
+| `velToCutoff` | 18 | 2000 | 0 … 6000 | 50 | Hz |
+| `ampAttack` | 10 | 0.005 | 0.001 … 2 | 0.001 | seconds |
+| `ampDecay` | 11 | 0.25 | 0.005 … 2 | 0.005 | seconds |
+| `ampSustain` | 12 | 0.7 | 0 … 1 | 0.01 | ratio |
+| `ampRelease` | 13 | 0.25 | 0.005 … 3 | 0.005 | seconds |
+| `fltAttack` | 14 | 0.002 | 0.001 … 2 | 0.001 | seconds |
+| `fltDecay` | 15 | 0.3 | 0.005 … 2 | 0.005 | seconds |
+| `fltSustain` | 16 | 0.3 | 0 … 1 | 0.01 | ratio |
+| `fltRelease` | 17 | 0.25 | 0.005 … 3 | 0.005 | seconds |
+| `lfoRate` | 33 | 5 | 0.05 … 16 | 0.05 | Hz |
+| `lfoToPitch` | 34 | 0 | 0 … 60 | 1 | cents |
+| `lfoToCutoff` | 35 | 0 | 0 … 3000 | 25 | Hz |
+| `lfoToPwm` | 36 | 0 | 0 … 0.45 | 0.01 | ratio |
+| `chorusMix` | 22 | 0 | 0 … 1 | 0.01 | ratio |
+| `chorusRate` | 20 | 0.6 | 0.05 … 6 | 0.01 | Hz |
+| `chorusDepth` | 21 | 3 | 0 … 12 | 0.1 | milliseconds |
+| `delayMix` | 23 | 0 | 0 … 1 | 0.01 | ratio |
+| `delayTime` | 24 | 0.25 | 0.02 … 1 | 0.005 | seconds |
+| `delayFeedback` | 25 | 0.35 | 0 … 0.92 | 0.01 | ratio |
+| `delayTone` | 26 | 3200 | 400 … 16000 | 100 | Hz |
+| `reverbMix` | 27 | 0 | 0 … 1 | 0.01 | ratio |
+| `reverbSize` | 28 | 0.6 | 0 … 1 | 0.01 | ratio |
+| `reverbDamp` | 29 | 4200 | 800 … 14000 | 100 | Hz |
+| `reverbPredelay` | 30 | 18 | 0 … 100 | 1 | milliseconds |
+| `stereoWidth` | 38 | 0.7 | 0 … 1 | 0.01 | ratio |
+| `syncRatio` | 39 | 1 | 1 … 8 | 0.05 | ratio |
+| `pitchEnvAmount` | 40 | 0 | -36 … 36 | 1 | semitones |
+| `pitchEnvDecay` | 41 | 0.08 | 0.005 … 1 | 0.005 | seconds |
+| `lfo2Rate` | 42 | 3 | 0.05 … 16 | 0.05 | Hz |
+| `lfo2ToCutoff` | 43 | 0 | 0 … 4000 | 25 | Hz |
+| `lfo2ToPitch` | 44 | 0 | 0 … 12 | 0.1 | semitones |
+| `noiseColor` | 45 | 0 | 0 … 1 | 0.01 | ratio (white to pink) |
+| `oscLevel` | 46 | 1 | 0 … 1 | 0.01 | linear gain |
+| `gain` | 19 | 0.32 | 0 … 0.85 | 0.01 | linear gain |
+<!-- /generated:parameters -->
+
+## Known limits
+
+- This is a browser AudioWorklet library, not a Node audio renderer, DAW, sequencer, arpeggiator, sampler, Web MIDI adapter, or plugin format.
+- Chromium and Playwright WebKit are blocking release targets. Firefox and direct mobile-device performance tiers are not currently release gates.
+- PolyBLEP alias rejection degrades in the upper register, and non-integer hard-sync ratios retain some inharmonic energy; both behaviors are measured rather than hidden.
+- The voice pool steals the oldest voice when exhausted. Under load the engine degrades by shedding a voice rather than increasing its fixed allocation.
+- `setParam()` rejects unknown names, but callers are responsible for keeping values inside the exported `PARAMETERS` ranges.
 
 ## Size
 
@@ -91,14 +171,16 @@ closed-form specifications instead — see [Verification](#verification).
 | artifact | raw | gzipped |
 |---|---:|---:|
 | `packages/core/wasm/subtractive_dsp.wasm` | 76,064 B | 30,122 B |
-| `packages/core/src/index.js` | 8,935 B | 3,338 B |
+| `packages/core/src/index.js` | 7,956 B | 2,822 B |
+| `packages/core/src/parameters.js` | 4,179 B | 1,533 B |
+| `packages/core/src/presets.js` | 20,792 B | 4,825 B |
 | `packages/core/worklet/processor.js` | 5,793 B | 2,176 B |
-| **total** | | **35,636 B (34.8 KB)** |
+| **total** | | **41,478 B (40.5 KB)** |
 
-Budget is 60 KB gzipped for the whole library — currently **58%**.
+Budget is 60 KB gzipped for the whole library — currently **67%**.
 <!-- /generated:bundle -->
 
-## Cost
+## Runtime cost
 
 <!-- generated:bench -->
 | | |
@@ -108,18 +190,11 @@ Budget is 60 KB gzipped for the whole library — currently **58%**.
 | real-time factor | 7.5x |
 <!-- /generated:bench -->
 
-Measured on the machine that regenerated this table, with the voice pool saturated and
-the chorus on — the worst case this build can produce. Figures for other devices,
-including mobile, are not claimed.
+The benchmark saturates the voice pool with the reference arrangement and enables chorus, which is the worst case this build can produce. The measurement describes the machine that regenerated the table; performance on other devices, including mobile devices, is not claimed.
 
 ## Verification
 
-An ideal sawtooth has harmonics at *k·f₀* with amplitude ∝ 1/*k*; a ladder filter is a
-discretization of a known transfer function. Both have closed-form specifications, so
-oscillators are graded analytically rather than against reference recordings.
-
-Every oscillator is graded against that prototype, worst-case across a grid, on a
-hidden set of frequencies and sample rates it was never tuned against:
+An ideal sawtooth has harmonics at *k·f₀* with amplitude proportional to 1/*k*, and the filters have known transfer-function targets. The harness grades the shipped oscillator against the analytic prototype, checks filter response, stability, headroom, tuning, patch-bank loudness and distinctness, audio-thread cost, artifact size, package installation, browser audio, lifecycle failure paths, and real consumer builds.
 
 <!-- generated:verdicts -->
 | candidate | alias dB | harmonic err | verdict |
@@ -134,16 +209,7 @@ hidden set of frequencies and sample rates it was never tuned against:
 | `cheat_special_cased` | -11.5 | 0.8 | REJECT (passed visible) |
 <!-- /generated:verdicts -->
 
-`wasm_saw` is the shipped artifact. The rest is scaffolding, including four cheats
-written before any DSP existed: every gate has a degenerate optimum, and asserting that
-the gate rejects a candidate built to game it is the check that the gate measures what
-was intended.
-
-Two of them justify the design. `cheat_pure_sine` has the best alias suppression of any
-candidate — a gate on alias energy alone would rank it first; it is caught only by
-harmonic structure, which is why the two metrics are paired. `cheat_special_cased` is
-correct on the published grid and naive everywhere else; it passes the visible grid
-outright and is caught only by the hidden one.
+`wasm_saw` is the shipped path. The remaining candidates include deliberate cheats: silence, a pure sine, a brick-wall construction, and a candidate special-cased to the visible grid. Their rejection demonstrates that an alias metric cannot pass by deleting the intended harmonic structure or overfitting published cases.
 
 ### Measured alias suppression
 
@@ -159,13 +225,9 @@ outright and is caught only by the hidden one.
 | 2200 | -12.4 dB | -27.0 dB | +14.7 dB |
 <!-- /generated:alias-table -->
 
-PolyBLEP gives a consistent ~16 dB over a raw phase ramp and degrades with pitch. This
-is a known limit: the upper register needs oversampling before the gate can be
-tightened.
+## Patch intent coverage
 
-## Patches
-
-Every exported preset is bound to exactly one checked intent artifact. Historical provenance is explicit: `prior` means Git history proves the intent predates implementation, while `retrospective` means the artifact was reconstructed from an already tuned patch and did not guide its original tuning. New presets cannot use the frozen retrospective migration exception.
+Every exported preset is bound to exactly one checked intent artifact. `prior` means Git history proves the intent predates implementation; `retrospective` means the artifact was reconstructed from an already tuned patch and did not guide its original tuning. New presets cannot use the frozen retrospective migration exception.
 
 <!-- generated:intent-coverage -->
 | intent coverage | count |
@@ -177,35 +239,22 @@ Every exported preset is bound to exactly one checked intent artifact. Historica
 | proposed before implementation | 0 |
 <!-- /generated:intent-coverage -->
 
-<!-- generated:roster -->
-| group | patches |
-|---|---:|
-| pad | 12 |
-| lead | 10 |
-| pluck | 8 |
-| bass | 7 |
-| brass | 4 |
-| **total** | **41** |
-<!-- /generated:roster -->
-
 ## Harness
 
 <!-- generated:harness-stats -->
 | | |
 |---|---|
-| harness audit assertions | 25 |
-| fail-correctly tests | 21 |
+| harness audit assertions | 24 |
+| Python harness/spec tests | 21 |
+| public metadata/README tests | 8 |
 | deliberately-broken fixtures | 8 |
 <!-- /generated:harness-stats -->
 
-Rules here are enforced as hooks, generated artifacts, or failing tests rather than
-prose. That includes the requirement that the harness itself be shown to fail:
-deliberately broken fixtures that every gate is asserted to reject. This caught one
-dead check when it was first introduced.
+Rules are enforced as hooks, generated artifacts, or failing tests rather than prose alone. That includes deliberately broken fixtures proving the audit can fail for the defect it claims to catch.
 
-- `PRINCIPLES.md` — the constitution
-- `AGENTS.md` — operating rules and routing
-- `agentic-docs/design/` — architecture, verification, and the evidence behind both
+- [`PRINCIPLES.md`](https://github.com/keunwoochoi/subtractive-synthesizers.js/blob/main/PRINCIPLES.md) — project constitution.
+- [`AGENTS.md`](https://github.com/keunwoochoi/subtractive-synthesizers.js/blob/main/AGENTS.md) — operating rules and task routing.
+- [`agentic-docs/design/`](https://github.com/keunwoochoi/subtractive-synthesizers.js/tree/main/agentic-docs/design) — architecture, verification, release criteria, and harness evidence.
 
 ## Development
 
@@ -215,13 +264,14 @@ npm install
 git config core.hooksPath .githooks
 
 cargo build -p subtractive-dsp --target wasm32-unknown-unknown --release
-npm run audit:harness      # docs, gates, fixtures, intents
-npm run verify:spec        # grade oscillators against the analytic prototype
-npm run audit:bundle       # the size number above
-node scripts/dev/e2e-check.mjs   # prove it makes sound in a real browser
+npm run audit:harness
+npm run verify:spec
+npm run audit:bundle
+npm run check:install
+npm run check:types
+npm run check:bundlers
 ```
 
 ## License
 
-Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option.
-Porting and trademark policy: `agentic-docs/licensing.md`.
+Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option. Porting and trademark policy is recorded in the repository's [licensing ledger](https://github.com/keunwoochoi/subtractive-synthesizers.js/blob/main/agentic-docs/licensing.md).

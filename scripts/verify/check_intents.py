@@ -73,7 +73,16 @@ def _field(regex: re.Pattern[str], text: str, name: str) -> str | None:
 
 
 def _preset_ids_from_source(source: str, where: str) -> tuple[set[str], str | None]:
-    program = source + "\nprocess.stdout.write(JSON.stringify(Object.keys(PRESETS)));\n"
+    # Evaluate only the bank declaration. The current module imports generated defaults,
+    # while historical snapshots before the metadata migration are self-contained. A
+    # stdin ESM has no file URL beside presets.js, so a relative import would resolve at
+    # the repository root and fail before the inventory could be read. Removing imports
+    # and supplying an inert default object keeps this history audit focused on its one
+    # question: which preset ids did this exact source export?
+    bank = re.sub(r"^import\s+.*?;\s*$", "", source, flags=re.M)
+    bank = re.sub(r"\b(?:SHAPE|FILTER)\.\w+", "0", bank)
+    program = ("const PARAM_DEFAULTS = {};\n" + bank +
+               "\nprocess.stdout.write(JSON.stringify(Object.keys(PRESETS)));\n")
     try:
         run = subprocess.run(
             ["node", "--input-type=module"], input=program, capture_output=True,

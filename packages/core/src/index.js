@@ -6,28 +6,8 @@
 // its own file, which keeps `npm run dev` working without a build.
 const WORKLET_SOURCE = /* __WORKLET_SOURCE__ */ null;
 
-/** Patch parameter ids. Mirrors the `set_param` match arms in crates/dsp/src/lib.rs. */
-export const PARAM = {
-  shape: 0, pulseWidth: 1, detuneCents: 2, subLevel: 3, noiseLevel: 4,
-  cutoffHz: 5, resonance: 6, drive: 7, envAmount: 8, keyTrack: 9,
-  ampAttack: 10, ampDecay: 11, ampSustain: 12, ampRelease: 13,
-  fltAttack: 14, fltDecay: 15, fltSustain: 16, fltRelease: 17,
-  velToCutoff: 18, gain: 19,
-  chorusRate: 20, chorusDepth: 21, chorusMix: 22,
-  delayMix: 23, delayTime: 24, delayFeedback: 25, delayTone: 26,
-  reverbMix: 27, reverbSize: 28, reverbDamp: 29, reverbPredelay: 30,
-  unison: 31, glide: 32, filterKind: 37, stereoWidth: 38, syncRatio: 39,
-  pitchEnvAmount: 40, pitchEnvDecay: 41,
-  lfo2Rate: 42, lfo2ToCutoff: 43, lfo2ToPitch: 44, noiseColor: 45, oscLevel: 46,
-  lfoRate: 33, lfoToPitch: 34, lfoToCutoff: 35, lfoToPwm: 36,
-};
-
-export const SHAPE = { saw: 0, pulse: 1, triangle: 2 };
-
-/** Filter types: two 4-pole lowpass characters, then the state-variable outputs. */
-export const FILTER = {
-  ladderLp: 0, diodeLp: 1, svfLp: 2, svfBp: 3, svfHp: 4, svfNotch: 5,
-};
+import { PARAM } from "./parameters.js";
+export { FILTER, PARAM, PARAMETERS, SHAPE } from "./parameters.js";
 
 /**
  * Create the engine. Lazy: the AudioContext is constructed here, so call it from a

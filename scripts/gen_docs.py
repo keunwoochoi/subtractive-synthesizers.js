@@ -22,6 +22,7 @@ difference is a test failure, not a suggestion (the readme-sync pattern).
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import subprocess
 import sys
@@ -37,6 +38,58 @@ BLOCK = re.compile(
 
 
 # --- generators: each returns the markdown body for its block --------------------
+
+def _node_json(source: str):
+    """Run a small ESM projection when JavaScript owns the fact being documented."""
+    out = subprocess.run(["node", "--input-type=module", "-e", source],
+                         capture_output=True, text=True, cwd=ROOT, check=True)
+    return json.loads(out.stdout)
+
+
+def gen_product_summary() -> str:
+    data = _node_json(
+        "import {PRESETS} from './packages/core/src/presets.js';"
+        "import {PARAMETERS} from './packages/core/src/parameters.js';"
+        "console.log(JSON.stringify({patches:Object.keys(PRESETS).length,params:Object.keys(PARAMETERS).length}))"
+    )
+    return (f"A browser subtractive synthesizer with {data['patches']} curated patches and "
+            f"{data['params']} documented controls. Audio is synthesized at runtime in a "
+            "WebAssembly AudioWorklet; the package contains no samples and needs no network "
+            "access while playing.\n")
+
+
+def gen_package_status() -> str:
+    package = json.loads((ROOT / "packages/core/package.json").read_text(encoding="utf-8"))
+    version = package["version"]
+    if "-" in version:
+        return (f"> **Release status:** This checkout carries pre-release manifest version "
+                f"`{version}`. The install command below is the intended registry path after "
+                "the owner authorizes the first publish; the live demos remain available now.\n")
+    return (f"> **Release status:** This checkout carries final manifest version `{version}`. "
+            "Registry publication is a separate human-authorized operation; confirm the available "
+            "version on the [npm package page](https://www.npmjs.com/package/subtractive-synthesizers.js).\n")
+
+
+def gen_parameters() -> str:
+    definitions = _node_json(
+        "import {PARAMETERS} from './packages/core/src/parameters.js';"
+        "console.log(JSON.stringify(PARAMETERS))"
+    )
+    rows = [
+        "| parameter | id | preset default | supported range | step | unit / values |",
+        "|---|---:|---:|---:|---:|---|",
+    ]
+    for name, definition in definitions.items():
+        values = definition.get("values")
+        if values:
+            detail = ", ".join(f"`{key}` = {value}" for key, value in values.items())
+        else:
+            detail = definition["unit"]
+        rows.append(
+            f"| `{name}` | {definition['id']} | {definition['default']} | "
+            f"{definition['min']} … {definition['max']} | {definition['step']} | {detail} |"
+        )
+    return "\n".join(rows) + "\n"
 
 def gen_alias_table() -> str:
     """Measured alias suppression. The number that sets the M1 gate."""
@@ -139,6 +192,12 @@ def _count_ok(cmd: list[str]) -> int:
     return int(m.group(1)) if m else 0
 
 
+def _count_node_tests(cmd: list[str]) -> int:
+    out = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
+    m = re.search(r"(?:ℹ|#) tests (\d+)", out.stdout + out.stderr)
+    return int(m.group(1)) if m else 0
+
+
 def gen_harness_stats() -> str:
     """Counts of the gates, so 'the harness is thorough' is never an unbacked claim."""
     audit = subprocess.run([sys.executable, "scripts/audit/harness_audit.py"],
@@ -147,10 +206,15 @@ def gen_harness_stats() -> str:
     checks = int(m.group(1)) if m else 0
     a = _count_ok([sys.executable, "scripts/audit/test_harness_audit.py"])
     v = _count_ok([sys.executable, "scripts/verify/test_verify_spec.py"])
+    public = _count_node_tests([
+        "node", "--test", "scripts/verify/test_parameters.mjs",
+        "scripts/verify/test_npm_readme.mjs",
+    ])
     fixtures = len([p for p in (ROOT / "scripts/audit/fixtures").iterdir() if p.is_dir()])
     return ("| | |\n|---|---|\n"
             f"| harness audit assertions | {checks} |\n"
-            f"| fail-correctly tests | {a + v} |\n"
+            f"| Python harness/spec tests | {a + v} |\n"
+            f"| public metadata/README tests | {public} |\n"
             f"| deliberately-broken fixtures | {fixtures} |\n")
 
 
@@ -272,16 +336,21 @@ def gen_api() -> str:
     for sig, doc in _members(dts, "Engine"):
         rows.append(f"| `{_pipe(sig)}` | {doc or '—'} |")
 
-    n_params = dts.count('"', dts.index("export type ParamName"), dts.index("export declare const PARAM")) // 2
+    metadata = _node_json(
+        "import {PARAMETERS} from './packages/core/src/parameters.js';"
+        "console.log(JSON.stringify({count:Object.keys(PARAMETERS).length}))"
+    )
     rows += ["",
-             f"`PARAM` names {n_params} patch parameters, `SHAPE` the 3 waveforms and "
-             f"`FILTER` the 6 filter types. The authoritative list is "
-             "[`index.d.ts`](packages/core/src/index.d.ts), which this table is generated from."]
+             f"`PARAMETERS` is the authoritative metadata for all {metadata['count']} controls; "
+             "`PARAM`, `SHAPE`, `FILTER`, preset defaults, declarations, the playground, and the parameter table below derive from it."]
     return "\n".join(rows) + "\n"
 
 
 GENERATORS = {
     "api": gen_api,
+    "package-status": gen_package_status,
+    "parameters": gen_parameters,
+    "product-summary": gen_product_summary,
     "quickstart": gen_quickstart,
     "bench": gen_bench,
     "bundle": gen_bundle,
