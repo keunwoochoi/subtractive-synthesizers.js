@@ -9,6 +9,14 @@ const withReleaseText = (body) => `${real}\n${body}\n`;
 
 test("the current generated npm README satisfies the consumer contract", () => {
   assert.deepEqual(auditNpmReadme({ version: manifest.version, readme: real }), []);
+  const misplaced = real.replace("\n\n## Install\n", "\n\n## Demo\n\n## Install\n");
+  const failures = auditNpmReadme({ version: manifest.version, readme: misplaced });
+  assert.ok(failures.some((failure) => failure.includes("obsolete Demo heading")), failures.join("\n"));
+  const links = real.match(/^\[npm package\].*$/m)?.[0];
+  assert.ok(links);
+  const linksAfterInstall = real.replace(`${links}\n\n## Install\n`, `## Install\n\n${links}\n`);
+  const placementFailures = auditNpmReadme({ version: manifest.version, readme: linksAfterInstall });
+  assert.ok(placementFailures.some((failure) => failure.includes("between the summary and Install")), placementFailures.join("\n"));
 });
 
 test("a final manifest fails closed on pre-release status language", () => {

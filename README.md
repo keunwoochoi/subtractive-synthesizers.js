@@ -11,6 +11,8 @@
 A 40.5 KB gzipped browser subtractive synthesizer with 41 curated patches and 47 documented controls. Audio is synthesized at runtime in a WebAssembly AudioWorklet; the package contains no samples and needs no network access while playing.
 <!-- /generated:product-summary -->
 
+[npm package](https://www.npmjs.com/package/subtractive-synthesizers.js) | [Patch showcase](https://keunwoochoi.github.io/subtractive-synthesizers.js/apps/playground/showcase.html) | [Playground](https://keunwoochoi.github.io/subtractive-synthesizers.js/apps/playground/index.html) | [Changelog](https://github.com/keunwoochoi/subtractive-synthesizers.js/blob/main/CHANGELOG.md)
+
 ## Install
 
 ```sh
@@ -29,10 +31,6 @@ engine.noteOn(60, 0.9);
 <!-- /generated:quickstart -->
 
 Call `createEngine()` from a user gesture because browsers control when audio may start. The engine resolves its packaged WASM and inlined worklet itself, and `applyPreset()` sends a complete patch so no state carries over from the previous sound.
-
-## Demo
-
-[npm package](https://www.npmjs.com/package/subtractive-synthesizers.js) | [Patch showcase](https://keunwoochoi.github.io/subtractive-synthesizers.js/apps/playground/showcase.html) | [Playground](https://keunwoochoi.github.io/subtractive-synthesizers.js/apps/playground/index.html) | [Changelog](https://github.com/keunwoochoi/subtractive-synthesizers.js/blob/main/CHANGELOG.md)
 
 ## What is included
 

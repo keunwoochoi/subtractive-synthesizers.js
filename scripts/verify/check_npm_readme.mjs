@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const REQUIRED_HEADINGS = [
-  "Install", "Demo", "What is included", "Compatibility and lifecycle", "API",
+  "Install", "What is included", "Compatibility and lifecycle", "API",
   "Parameters", "Known limits", "License",
 ];
 
@@ -29,6 +29,11 @@ export function auditNpmReadme({ version, readme }) {
   if (!readme.includes("npm install subtractive-synthesizers.js")) fail("missing the exact npm install command");
   if (!readme.includes("https://www.npmjs.com/package/subtractive-synthesizers.js")) fail("missing the npm package-page link");
   if (!readme.includes(PROJECT_LINKS)) fail("project links are not the compact npm/showcase/playground/changelog line");
+  const summaryEnd = readme.indexOf("<!-- /generated:product-summary -->");
+  const linksAt = readme.indexOf(PROJECT_LINKS);
+  const installAt = readme.indexOf("## Install\n");
+  if (!(summaryEnd < linksAt && linksAt < installAt)) fail("project links are not between the summary and Install");
+  if (readme.includes("## Demo\n")) fail("obsolete Demo heading is present");
   if (/<!-- generated:package-status -->|> \*\*Release status:\*\*/i.test(readme)) fail("obsolete release-status paragraph is present");
   for (const heading of REQUIRED_HEADINGS) {
     if (!readme.includes(`## ${heading}\n`)) fail(`missing required '${heading}' section`);
