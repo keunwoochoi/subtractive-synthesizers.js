@@ -80,7 +80,13 @@ try {
         current: link.getAttribute("aria-current"), color: style.color,
         background: style.backgroundColor };
     });
-    return { before, after, views, repoHref: document.querySelector("header h1 a.hl").href,
+    const families = [...document.querySelectorAll(".grouphead")].map((heading) => ({
+      group: heading.dataset.group,
+      color: getComputedStyle(heading).color,
+      cards: document.querySelectorAll(`.card[data-group="${heading.dataset.group}"]`).length,
+    }));
+    return { before, after, views, families,
+      repoHref: document.querySelector("header h1 a.hl").href,
       redundantEditorLink: document.querySelector('.meta a[href="./index.html"]') !== null,
       statusText: document.getElementById("status").textContent,
       playTitle: document.getElementById("play").title };
@@ -103,6 +109,9 @@ try {
   if (docks.redundantEditorLink) fail("showcase still has the redundant full-editor text link");
   if (/space toggles/i.test(docks.statusText) || /space/i.test(docks.playTitle))
     fail("showcase still displays Space shortcut helper text");
+  if (docks.families.length !== 5 || docks.families.some((family) => family.cards < 1) ||
+      new Set(docks.families.map((family) => family.color)).size !== docks.families.length)
+    fail(`patch-family palettes are missing or not distinct: ${JSON.stringify(docks.families)}`);
 
   // A patch name is the primary audition gesture: it must initialize the engine and
   // start transport, not merely move a highlight while the page remains silent.

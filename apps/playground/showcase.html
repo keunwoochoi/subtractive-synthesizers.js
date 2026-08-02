@@ -41,15 +41,21 @@
   input[type=range]{accent-color:var(--accent)}
   .cards{display:block}
   .grouphead{margin:16px 0 8px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
-             color:var(--dim);font-weight:600}
+             color:var(--group,var(--dim));font-weight:600;opacity:.86}
   .grouphead:first-child{margin-top:0}
   .cardrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:9px}
+  [data-group="bass"]{--group:#ffb454;--group-line:#6a4d2b;--group-wash:#1d1a14}
+  [data-group="lead"]{--group:#5ad1ff;--group-line:#28566a;--group-wash:#111b20}
+  [data-group="pad"]{--group:#c39bff;--group-line:#55436f;--group-wash:#191620}
+  [data-group="pluck"]{--group:#7ee787;--group-line:#35633a;--group-wash:#141d16}
+  [data-group="brass"]{--group:#ff7b72;--group-line:#6a3532;--group-wash:#201514}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:9px;
-        padding:13px 15px;cursor:pointer;transition:border-color .12s,background .12s}
-  .card:hover{border-color:#3d4757}
-  .card.on{border-color:var(--accent);background:#1d1a14}
+        border-top-color:var(--group-line,var(--line));padding:13px 15px;cursor:pointer;
+        transition:border-color .12s,background .12s}
+  .card:hover{border-color:var(--group-line,#3d4757)}
+  .card.on{border-color:var(--group,var(--accent));background:var(--group-wash,#1d1a14)}
   .card h3{margin:0 0 4px;font-size:13.5px;font-weight:600}
-  .card.on h3{color:var(--accent)}
+  .card.on h3{color:var(--group,var(--accent))}
   .card p{margin:0;color:var(--dim);font-size:12px;line-height:1.45}
   .visual-dock{padding:10px 24px 12px;border-top:1px solid var(--line);flex:none;
                background:var(--bg);position:relative;z-index:3}
@@ -156,14 +162,17 @@ for (const g of GROUPS) {
   if (!entries.length) continue;
   const h = document.createElement("h4");
   h.className = "grouphead";
+  h.dataset.group = g;
   h.textContent = `${LABEL[g] ?? g} · ${entries.length}`;
   cards.appendChild(h);
   const row = document.createElement("div");
   row.className = "cardrow";
+  row.dataset.group = g;
   for (const [key, p] of entries) {
     const el = document.createElement("div");
     el.className = "card" + (key === current ? " on" : "");
     el.dataset.key = key;
+    el.dataset.group = g;
     el.innerHTML = `<h3>${p.label}</h3><p>${p.blurb}</p>`;
     el.onclick = async () => {
       selectPatch(key);
