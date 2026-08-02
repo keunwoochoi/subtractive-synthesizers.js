@@ -26,6 +26,7 @@ import json
 import re
 import subprocess
 import sys
+from functools import cache
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -52,19 +53,11 @@ def gen_product_summary() -> str:
         "import {PARAMETERS} from './packages/core/src/parameters.js';"
         "console.log(JSON.stringify({patches:Object.keys(PRESETS).length,params:Object.keys(PARAMETERS).length}))"
     )
-    return (f"A browser subtractive synthesizer with {data['patches']} curated patches and "
+    return (f"A {gen_bundle_total()} gzipped browser subtractive synthesizer with "
+            f"{data['patches']} curated patches and "
             f"{data['params']} documented controls. Audio is synthesized at runtime in a "
             "WebAssembly AudioWorklet; the package contains no samples and needs no network "
             "access while playing.\n")
-
-
-def gen_package_status() -> str:
-    package = json.loads((ROOT / "packages/core/package.json").read_text(encoding="utf-8"))
-    version = package["version"]
-    return ("> **Release status:** Published on npm. This checkout carries manifest version "
-            f"`{version}`; the badge and [npm package page]"
-            "(https://www.npmjs.com/package/subtractive-synthesizers.js) show the version currently "
-            "available from the registry.\n")
 
 
 def gen_parameters() -> str:
@@ -215,13 +208,18 @@ def gen_harness_stats() -> str:
             f"| deliberately-broken fixtures | {fixtures} |\n")
 
 
+@cache
+def _bundle_audit_output() -> str:
+    """Run the size audit once even when both the summary and table need its result."""
+    return subprocess.run(["scripts/audit/bundle-size-audit.sh"],
+                          capture_output=True, text=True, cwd=ROOT).stdout
+
+
 def gen_bundle() -> str:
     """Measured size of everything a browser downloads. Owned by the audit script."""
-    out = subprocess.run(["scripts/audit/bundle-size-audit.sh"],
-                         capture_output=True, text=True, cwd=ROOT)
     rows = ["| artifact | raw | gzipped |", "|---|---:|---:|"]
     total = pct = None
-    for ln in out.stdout.splitlines():
+    for ln in _bundle_audit_output().splitlines():
         parts = ln.split()
         if len(parts) == 3 and parts[0].startswith("packages/"):
             rows.append(f"| `{parts[0]}` | {int(parts[1]):,} B | {int(parts[2]):,} B |")
@@ -239,9 +237,7 @@ def gen_bundle() -> str:
 
 def gen_bundle_total() -> str:
     """Just the headline figure, for places that want one number inline."""
-    out = subprocess.run(["scripts/audit/bundle-size-audit.sh"],
-                         capture_output=True, text=True, cwd=ROOT)
-    for ln in out.stdout.splitlines():
+    for ln in _bundle_audit_output().splitlines():
         parts = ln.split()
         if parts[:1] == ["TOTAL"]:
             return f"{int(parts[1]) / 1024:.1f} KB"
@@ -345,7 +341,6 @@ def gen_api() -> str:
 
 GENERATORS = {
     "api": gen_api,
-    "package-status": gen_package_status,
     "parameters": gen_parameters,
     "product-summary": gen_product_summary,
     "quickstart": gen_quickstart,

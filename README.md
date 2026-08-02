@@ -8,12 +8,8 @@
 [![license](https://img.shields.io/npm/l/subtractive-synthesizers.js.svg)](LICENSE-MIT)
 
 <!-- generated:product-summary -->
-A browser subtractive synthesizer with 41 curated patches and 47 documented controls. Audio is synthesized at runtime in a WebAssembly AudioWorklet; the package contains no samples and needs no network access while playing.
+A 40.5 KB gzipped browser subtractive synthesizer with 41 curated patches and 47 documented controls. Audio is synthesized at runtime in a WebAssembly AudioWorklet; the package contains no samples and needs no network access while playing.
 <!-- /generated:product-summary -->
-
-<!-- generated:package-status -->
-> **Release status:** Published on npm. This checkout carries manifest version `0.1.0`; the badge and [npm package page](https://www.npmjs.com/package/subtractive-synthesizers.js) show the version currently available from the registry.
-<!-- /generated:package-status -->
 
 ## Install
 
@@ -36,9 +32,7 @@ Call `createEngine()` from a user gesture because browsers control when audio ma
 
 ## Demo
 
-- **[Patch showcase](https://keunwoochoi.github.io/subtractive-synthesizers.js/apps/playground/showcase.html)** — hear the curated patch bank.
-- **[Playground](https://keunwoochoi.github.io/subtractive-synthesizers.js/apps/playground/index.html)** — play a keyboard and edit every public parameter.
-- **[Changelog](https://github.com/keunwoochoi/subtractive-synthesizers.js/blob/main/CHANGELOG.md)** — user-visible release history.
+[npm package](https://www.npmjs.com/package/subtractive-synthesizers.js) | [Patch showcase](https://keunwoochoi.github.io/subtractive-synthesizers.js/apps/playground/showcase.html) | [Playground](https://keunwoochoi.github.io/subtractive-synthesizers.js/apps/playground/index.html) | [Changelog](https://github.com/keunwoochoi/subtractive-synthesizers.js/blob/main/CHANGELOG.md)
 
 ## What is included
 
@@ -249,7 +243,7 @@ Every exported preset is bound to exactly one checked intent artifact. `prior` m
 |---|---|
 | harness audit assertions | 25 |
 | Python harness/spec tests | 23 |
-| public metadata/README tests | 9 |
+| public metadata/README tests | 10 |
 | deliberately-broken fixtures | 8 |
 <!-- /generated:harness-stats -->
 

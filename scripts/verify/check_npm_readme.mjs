@@ -1,6 +1,6 @@
-// Validate the README as npm will render it, including the version transition that is
-// otherwise easiest to forget. This check never asks the registry whether a version is
-// published: a manifest version and a registry upload are separate facts.
+// Validate the README as npm will render it, including the stale release language that
+// is easiest to forget after publication. This check never asks the registry whether a
+// version is published: a manifest version and a registry upload are separate facts.
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -19,25 +19,27 @@ const FINAL_STALE = [
   /\bregistry publication is a separate\b/i,
 ];
 
+const PROJECT_LINKS = "[npm package](https://www.npmjs.com/package/subtractive-synthesizers.js) | [Patch showcase](https://keunwoochoi.github.io/subtractive-synthesizers.js/apps/playground/showcase.html) | [Playground](https://keunwoochoi.github.io/subtractive-synthesizers.js/apps/playground/index.html) | [Changelog](https://github.com/keunwoochoi/subtractive-synthesizers.js/blob/main/CHANGELOG.md)";
+
 export function auditNpmReadme({ version, readme }) {
   const failures = [];
   const finalVersion = /^\d+\.\d+\.\d+$/.test(version);
   const fail = (message) => failures.push(message);
-  const status = readme.match(/<!-- generated:package-status -->\n([\s\S]*?)<!-- \/generated:package-status -->/)?.[1] ?? "";
 
   if (!readme.includes("npm install subtractive-synthesizers.js")) fail("missing the exact npm install command");
-  if (!status.includes(`\`${version}\``)) fail(`release-status block does not name manifest version ${version}`);
+  if (!readme.includes("https://www.npmjs.com/package/subtractive-synthesizers.js")) fail("missing the npm package-page link");
+  if (!readme.includes(PROJECT_LINKS)) fail("project links are not the compact npm/showcase/playground/changelog line");
+  if (/<!-- generated:package-status -->|> \*\*Release status:\*\*/i.test(readme)) fail("obsolete release-status paragraph is present");
   for (const heading of REQUIRED_HEADINGS) {
     if (!readme.includes(`## ${heading}\n`)) fail(`missing required '${heading}' section`);
   }
-  for (const marker of ["product-summary", "package-status", "quickstart", "api", "parameters", "roster"]) {
+  for (const marker of ["product-summary", "quickstart", "api", "parameters", "roster"]) {
     if (!readme.includes(`<!-- generated:${marker} -->`) || !readme.includes(`<!-- /generated:${marker} -->`)) {
       fail(`missing generated:${marker} block`);
     }
   }
 
   if (finalVersion) {
-    if (!/\bpublished on npm\b/i.test(status)) fail("final version does not say that the package is published on npm");
     for (const stale of FINAL_STALE) {
       if (stale.test(readme)) fail(`final version contains stale release language matching ${stale}`);
     }
@@ -80,5 +82,5 @@ if (invoked) {
     for (const failure of failures) console.error(`  - ${failure}`);
     process.exit(1);
   }
-  console.log("npm README OK — install, compatibility, parameters, limits, version status, and package-page links are release-accurate");
+  console.log("npm README OK — install, compatibility, parameters, limits, and package-page links are release-accurate");
 }
