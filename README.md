@@ -4,12 +4,15 @@
 
 # subtractive-synthesizers.js
 
+[![npm](https://img.shields.io/npm/v/subtractive-synthesizers.js.svg)](https://www.npmjs.com/package/subtractive-synthesizers.js)
+[![license](https://img.shields.io/npm/l/subtractive-synthesizers.js.svg)](LICENSE-MIT)
+
 <!-- generated:product-summary -->
 A browser subtractive synthesizer with 41 curated patches and 47 documented controls. Audio is synthesized at runtime in a WebAssembly AudioWorklet; the package contains no samples and needs no network access while playing.
 <!-- /generated:product-summary -->
 
 <!-- generated:package-status -->
-> **Release status:** This checkout carries final manifest version `0.1.0`. Registry publication is a separate human-authorized operation; confirm the available version on the [npm package page](https://www.npmjs.com/package/subtractive-synthesizers.js).
+> **Release status:** Published on npm. This checkout carries manifest version `0.1.0`; the badge and [npm package page](https://www.npmjs.com/package/subtractive-synthesizers.js) show the version currently available from the registry.
 <!-- /generated:package-status -->
 
 ## Install
@@ -35,7 +38,7 @@ Call `createEngine()` from a user gesture because browsers control when audio ma
 
 - **[Patch showcase](https://keunwoochoi.github.io/subtractive-synthesizers.js/apps/playground/showcase.html)** — hear the curated patch bank.
 - **[Playground](https://keunwoochoi.github.io/subtractive-synthesizers.js/apps/playground/index.html)** — play a keyboard and edit every public parameter.
-- **[Changelog](https://github.com/keunwoochoi/subtractive-synthesizers.js/blob/main/CHANGELOG.md)** — user-visible changes toward the first release.
+- **[Changelog](https://github.com/keunwoochoi/subtractive-synthesizers.js/blob/main/CHANGELOG.md)** — user-visible release history.
 
 ## What is included
 
@@ -186,8 +189,8 @@ Budget is 60 KB gzipped for the whole library — currently **67%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **14.9 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 6.7x |
+| audio-thread budget used | **14.6 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 6.8x |
 <!-- /generated:bench -->
 
 The benchmark saturates the voice pool with the reference arrangement and enables chorus, which is the worst case this build can produce. The measurement describes the machine that regenerated the table; performance on other devices, including mobile devices, is not claimed.
@@ -246,7 +249,7 @@ Every exported preset is bound to exactly one checked intent artifact. `prior` m
 |---|---|
 | harness audit assertions | 25 |
 | Python harness/spec tests | 23 |
-| public metadata/README tests | 8 |
+| public metadata/README tests | 9 |
 | deliberately-broken fixtures | 8 |
 <!-- /generated:harness-stats -->
 

@@ -61,13 +61,10 @@ def gen_product_summary() -> str:
 def gen_package_status() -> str:
     package = json.loads((ROOT / "packages/core/package.json").read_text(encoding="utf-8"))
     version = package["version"]
-    if "-" in version:
-        return (f"> **Release status:** This checkout carries pre-release manifest version "
-                f"`{version}`. The install command below is the intended registry path after "
-                "the owner authorizes the first publish; the live demos remain available now.\n")
-    return (f"> **Release status:** This checkout carries final manifest version `{version}`. "
-            "Registry publication is a separate human-authorized operation; confirm the available "
-            "version on the [npm package page](https://www.npmjs.com/package/subtractive-synthesizers.js).\n")
+    return ("> **Release status:** Published on npm. This checkout carries manifest version "
+            f"`{version}`; the badge and [npm package page]"
+            "(https://www.npmjs.com/package/subtractive-synthesizers.js) show the version currently "
+            "available from the registry.\n")
 
 
 def gen_parameters() -> str:

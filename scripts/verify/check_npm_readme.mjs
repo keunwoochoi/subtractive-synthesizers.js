@@ -16,6 +16,7 @@ const FINAL_STALE = [
   /\bunpublished\b/i,
   /\bpre-release manifest version\b/i,
   /\bintended registry path after\b/i,
+  /\bregistry publication is a separate\b/i,
 ];
 
 export function auditNpmReadme({ version, readme }) {
@@ -36,6 +37,7 @@ export function auditNpmReadme({ version, readme }) {
   }
 
   if (finalVersion) {
+    if (!/\bpublished on npm\b/i.test(status)) fail("final version does not say that the package is published on npm");
     for (const stale of FINAL_STALE) {
       if (stale.test(readme)) fail(`final version contains stale release language matching ${stale}`);
     }

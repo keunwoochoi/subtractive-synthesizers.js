@@ -237,11 +237,12 @@ def audit(root: Path) -> Report:
             f for f in target.rglob("*")
             if f.is_file() and f.suffix in (".js", ".ts", ".html", ".md", ".json")
             and "node_modules" not in f.relative_to(root).parts
-            and "dist" not in f.relative_to(root).parts]
+            and "dist" not in f.relative_to(root).parts
+            and not excluded(f)]
         for f in files:
             in_readme_history = False
             for i, line in enumerate(read(f).splitlines()):
-                if f == root / "README.md" and line.startswith("## "):
+                if f.name == "README.md" and line.startswith("## "):
                     in_readme_history = line == "## A short build log"
                 m = mark_re.search(line)
                 if m and not in_readme_history:

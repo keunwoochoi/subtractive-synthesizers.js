@@ -20,9 +20,15 @@ test("a final manifest fails closed on pre-release status language", () => {
   assert.ok(failures.some((failure) => failure.includes("stale release language")), failures.join("\n"));
 });
 
-test("a final manifest passes after the generated status becomes release-neutral", () => {
-  const readme = withStatus("> **Release status:** This checkout carries final manifest version `9.8.7`. Registry publication is a separate human-authorized operation; confirm the available version on the [npm package page](https://www.npmjs.com/package/subtractive-synthesizers.js).");
+test("a final manifest passes when the generated status identifies the published package", () => {
+  const readme = withStatus("> **Release status:** Published on npm. This checkout carries manifest version `9.8.7`; the badge and [npm package page](https://www.npmjs.com/package/subtractive-synthesizers.js) show the version currently available from the registry.");
   assert.deepEqual(auditNpmReadme({ version: "9.8.7", readme }), []);
+});
+
+test("a final manifest fails when its status still calls publication a separate operation", () => {
+  const readme = withStatus("> **Release status:** This checkout carries final manifest version `9.8.7`. Registry publication is a separate human-authorized operation.");
+  const failures = auditNpmReadme({ version: "9.8.7", readme });
+  assert.ok(failures.some((failure) => failure.includes("stale release language")), failures.join("\n"));
 });
 
 test("a package-relative asset that is absent from the tarball fails", () => {
