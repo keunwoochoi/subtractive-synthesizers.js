@@ -78,10 +78,12 @@ Every ported file: `| path | origin file | origin license | date | PR | notes |`
 
 | path | origin | license | date | PR | notes |
 |---|---|---|---|---|---|
-| _(none yet)_ | | | | | |
+| `packages/core/worklet/processor.js` | `physical-instruments.js` `packages/core/worklet/instruments-processor.js` @ `ce671d7` | MIT OR Apache-2.0 (same owner) | 2026-07-28 | landed in `33a25e1` | Plumbing host (worklet → WASM handshake). Copied then adapted: class renamed `SubtractiveProcessor`, comments trimmed; read-path logic follows the origin. Owner decision 2026-08-02: shared-engine extraction will not happen — this copy is permanent. |
+| `packages/core/src/index.js` (createEngine surface) | `physical-instruments.js` `packages/core/src/index.ts` @ `ce671d7` | MIT OR Apache-2.0 (same owner) | 2026-07-28 | landed in `33a25e1` | TS→JS rewrite of the control plane (lazy/SSR-safe `createEngine`, `wasmUrl`/`workletUrl`/`initialEvents`/offline-render contract) with the shared public API kept identical by design. Same permanent-copy decision as above. |
 
 Plumbing lifted from `physical-instruments.js` (same owner, MIT OR Apache-2.0) is recorded here with
-its exact source SHA when it lands, so the later shared-core extraction has a clean diff.
+its exact source SHA so provenance is visible; with the owner's 2026-08-02 decision that no shared
+engine will ever be extracted, the "clean diff for a later extraction" purpose of these rows is moot.
 
 ## Incident log
 

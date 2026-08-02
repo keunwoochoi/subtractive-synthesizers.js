@@ -7,6 +7,35 @@ context on every task, and the constitution has a hard line budget for exactly t
 Every amendment states what the old rule got wrong, quotes the owner verbatim where a decision was
 theirs, and carries a **Sync Impact Report** naming the artifacts it must propagate to.
 
+### 1.5.0 — 2026-08-02 — Packages are self-contained by design: no shared engine
+
+**Owner, verbatim:** *"I've never wanted to do this. My 100% conviction intention is to keep every
+package separate. It's okay to have a hard copy, cloned and duplicate code across different packages.
+Completely fine."*
+
+**What the old rule got wrong.** The architecture doc's shared-plumbing decision recommended "copy
+now, with a committed path to (b) extract later" — it treated cross-package duplication as a
+temporary release hedge whose cost the extraction would eventually buy back. That framing implied a
+durable intent to converge on a shared engine. The owner rejects convergence outright: duplication
+is not a cost to be repaid but the design itself, and no extraction should ever be scheduled.
+
+**New rule.** Each sibling ships its own copy of the instrument-agnostic plumbing. Cross-package
+duplication is deliberate and permanent — not drift to be reconciled. No `@instrumentsjs/engine` (or
+equivalent) is planned. Provenance in licensing ledgers is still recorded (license hygiene is
+absolute); its "clean diff for a later extraction" purpose is moot.
+
+**Sync Impact Report** — artifacts this amendment must propagate to:
+- `PRINCIPLES.md` engineering-principles section and amendment index — **required and done**.
+- `agentic-docs/design/` — **required**: a dated decision doc records this outcome for tracker issue
+  #20, referencing the sibling's tracking issue `keunwoochoi/physical-instruments.js#103`.
+- `agentic-docs/licensing.md` port ledger — **required**: provenance + source SHA of the copied
+  plumbing recorded; notes that the clean-diff purpose is moot.
+- `agentic-docs/design/2026-07-28-architecture.md` — **recommended**: the shared-plumbing
+  recommendation's "path to (b)" is superseded by this amendment; the doc is not edited, the
+  decision doc supersedes it.
+- `_knowledge-base/08-owner-taste.md` — **required and done**: family-wide owner-taste record.
+- Journey log (tracker #2) — record this decision.
+
 ### 1.4.0 — 2026-08-01 — Factual instrument history is not product branding
 
 **Owner, verbatim:** *“Add multiple synthesizer names of the same kind, not only Moog, but just in general. Like there should be quite a lot of them. Just pick the popular ones.”* And: *“If there's a very like seminal one in the music history ... some sort of historical snippet like that, information like that, like a fun fact.”*

@@ -1,6 +1,6 @@
 # PRINCIPLES
 
-**Version 1.4.0** · Ratified 2026-07-28 · Last amended 2026-08-01
+**Version 1.5.0** · Ratified 2026-07-28 · Last amended 2026-08-02
 
 > This is the constitution. `AGENTS.md` routes; this file governs and supersedes other practice.
 > Amendments are dated, quote the owner verbatim, say what the old rule got wrong, and carry a
@@ -53,11 +53,7 @@ demands on anyone's deployment.
 ## Engineering principles
 
 ### Fidelity to specification, not to a recording
-A ladder filter is a discretization of a known transfer function; an ideal saw has harmonics at
-*k·f₀* with amplitude ∝ 1/*k*. **We do not need a reference recording because we have a reference
-equation** — no room, no microphone, no performer, no license, no sampling error. This is the
-structural difference from the sibling project, and why our CI can block on numbers it could only
-review by ear.
+A ladder filter is a discretization of a known transfer function; an ideal saw has harmonics at *k·f₀* with amplitude ∝ 1/*k*. **We do not need a reference recording because we have a reference equation** — no room, no microphone, no performer, no license, no sampling error. This is the structural difference from the sibling project, and why our CI can block on numbers it could only review by ear.
 
 ### Reference-corpus convergence is a non-goal
 Rejected on two grounds: we are not trying to *be* any particular synthesizer, and no verified
@@ -123,9 +119,10 @@ itself be shown to fail correctly**, against deliberately broken fixtures. An au
 to fail is not evidence of anything.
 
 ### License hygiene is absolute
-Port MIT/BSD freely with ledger entries; never open GPL/LGPL/AGPL source — papers-only
-reimplementation. **Trademarks are the live risk in this domain:** the names of famous synthesizers
-may not be used in presets, public API, demo labels, or emulation claims. A clearly historical README section may make factual, sourced references to the machines. **Describe our sounds, never brand them.**
+Port MIT/BSD freely with ledger entries; never open GPL/LGPL/AGPL source — papers-only reimplementation. **Trademarks are the live risk in this domain:** the names of famous synthesizers may not be used in presets, public API, demo labels, or emulation claims. A clearly historical README section may make factual, sourced references to the machines. **Describe our sounds, never brand them.**
+
+### Packages are self-contained by design — no shared engine
+Every sibling ships its own copy of the shared plumbing; cross-package duplication is deliberate, permanent, not drift. No `@instrumentsjs/engine` is planned. Owner, verbatim, 2026-08-02: *"I've never wanted to do this. My 100% conviction intention is to keep every package separate. It's okay to have a hard copy, cloned and duplicate code across different packages. Completely fine."* This rejects the "path to (b) extract later" recommendation in the architecture doc. Ledger provenance stays (license hygiene); its "clean diff" purpose is moot.
 
 ## What we are not
 
@@ -143,6 +140,7 @@ Current version is in the header above. Full reasoning and Sync Impact Reports:
 [`agentic-docs/amendments.md`](agentic-docs/amendments.md).
 | Version | Date | What changed |
 |---|---|---|
+| 1.5.0 | 2026-08-02 | Packages are self-contained by design — no shared-engine extraction; cross-package duplication is deliberate |
 | 1.4.0 | 2026-08-01 | Factual, sourced instrument history permitted in one README section; branded sounds remain prohibited |
 | 1.3.0 | 2026-07-28 | Publishing identity is constitutional — GitHub actions come from the owning account, enforced |
 | 1.2.0 | 2026-07-28 | Evaluator integrity made constitutional — an exact metric is not a safe metric; taste becomes the next metric |
