@@ -51,6 +51,26 @@ Call `createEngine()` from a user gesture because browsers control when audio ma
 | **total** | **41** |
 <!-- /generated:roster -->
 
+## Signal path
+
+The whole path is custom DSP written in Rust, compiled to `wasm32-unknown-unknown`, and instantiated inside one `AudioWorkletProcessor`. The library constructs exactly one Web Audio node: the `AudioWorkletNode` returned as `engine.output`. No `OscillatorNode`, `BiquadFilterNode`, `DelayNode`, or `ConvolverNode` takes part in producing the sound, so the result does not depend on how a given browser implements those.
+
+Each voice runs at twice the context sample rate:
+
+```
+PolyBLEP saw/pulse/triangle (unison, drift, hard sync) + sub + noise
+  → ZDF/TPT filter: 4-pole ladder with tanh feedback saturation, diode, or 2-pole SVF
+  → half-band decimator
+```
+
+The rest runs at the context rate: the amplitude envelope is applied after decimation, then voices sum into chorus, ping-pong delay, and FDN reverb, in that order, followed by a gain stage and soft clip. Oscillators and filter are oversampled together because both generate energy above the audible band — step discontinuities and saturated feedback — and decimating after the filter gives that energy an extra octave of room before it can fold back. The measured result is in [Measured alias suppression](#measured-alias-suppression): -31.4 dB on the shipped path against -27.0 dB at 1x.
+
+The shared LFO is evaluated once per block into a scratch buffer and read by every voice, so a chord modulates at the same rate as a single note.
+
+Scheduled events are applied at sample accuracy. `process()` renders in segments between event boundaries rather than one segment per 128-frame render quantum, so a note begins on the frame it was scheduled for. Applying events at block granularity instead would put up to 2.7 ms of jitter on every onset at 48 kHz, which is audible on a sixteenth-note line.
+
+The DSP source is [`crates/dsp/`](https://github.com/keunwoochoi/subtractive-synthesizers.js/tree/main/crates/dsp/src) — `osc.rs`, `filter.rs`, `voice.rs`, `fx.rs`, and the engine plus its C ABI in `lib.rs`. The worklet hosting it is [`packages/core/worklet/processor.js`](https://github.com/keunwoochoi/subtractive-synthesizers.js/blob/main/packages/core/worklet/processor.js). Design rationale is recorded in [`agentic-docs/design/`](https://github.com/keunwoochoi/subtractive-synthesizers.js/tree/main/agentic-docs/design).
+
 ## Compatibility and lifecycle
 
 The ESM imports are SSR-safe: importing the package does not touch `window` or construct an `AudioContext`. Packed-package checks install the tarball into clean projects and render audio in Chromium and Playwright WebKit; separate fixtures build it without library-specific configuration in Vite, webpack 5, and Next.
