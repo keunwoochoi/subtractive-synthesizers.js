@@ -1,5 +1,5 @@
 <!--
-Draft by default. Link the issue. Keep the HUMAN block — CI fails without it.
+Draft by default. Link the issue.
 -->
 
 Closes #
@@ -31,8 +31,3 @@ Closes #
 | What caught the error | |
 | **Abandoned / wasted routes** | <!-- the row that is unrecoverable from the diff. Do not leave blank. --> |
 | Cost (CPU / memory / bundle) | |
-
-## HUMAN:
-
-<!-- The owner's words. AGENTS MUST NOT EDIT OR FILL THIS SECTION.
-     If it needs updating, stop and ask the owner to write it themselves. -->

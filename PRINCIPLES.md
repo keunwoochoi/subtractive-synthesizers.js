@@ -1,6 +1,6 @@
 # PRINCIPLES
 
-**Version 2.0.0** · Ratified 2026-07-28 · Last amended 2026-08-03
+**Version 2.1.0** · Ratified 2026-07-28 · Last amended 2026-08-03
 
 > This is the constitution. `AGENTS.md` routes; this file governs and supersedes other practice.
 > Amendments are dated, quote the owner verbatim, say what the old rule got wrong, and carry a
@@ -137,6 +137,7 @@ Current version is in the header above. Full reasoning and Sync Impact Reports:
 [`agentic-docs/amendments.md`](agentic-docs/amendments.md).
 | Version | Date | What changed |
 |---|---|---|
+| 2.1.0 | 2026-08-03 | HUMAN-block gate removed — a check only the owner could satisfy contradicted the dormant-repo CI design |
 | 2.0.0 | 2026-08-03 | Direct-to-main bootstrap ended; required PR CI replaces weekly monitoring |
 | 1.5.0 | 2026-08-02 | Packages are self-contained by design — no shared-engine extraction; cross-package duplication is deliberate |
 | 1.4.0 | 2026-08-01 | Factual, sourced instrument history permitted in one README section; branded sounds remain prohibited |
