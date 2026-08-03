@@ -107,20 +107,3 @@ jobs:
       # build the library into real Vite, webpack and Next apps and make each BUILT
       # bundle produce audio. Caught a dead code branch that failed webpack outright.
       - run: node scripts/dev/bundler-check.mjs
-
-  human-block:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Require a non-empty HUMAN block
-        env:
-          BODY: ${{ github.event.pull_request.body }}
-        run: |
-          if ! grep -q '^## HUMAN:' <<<"$BODY"; then
-            echo "::error::PR body is missing the '## HUMAN:' section."; exit 1
-          fi
-          CONTENT=$(sed -n '/^## HUMAN:/,$p' <<<"$BODY" | tail -n +2 | sed '/^<!--/,/-->/d' | tr -d '[:space:]')
-          if [ -z "$CONTENT" ]; then
-            echo "::error::The HUMAN block is empty. The owner must write it — agents must not."
-            exit 1
-          fi

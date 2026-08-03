@@ -7,6 +7,24 @@ context on every task, and the constitution has a hard line budget for exactly t
 Every amendment states what the old rule got wrong, quotes the owner verbatim where a decision was
 theirs, and carries a **Sync Impact Report** naming the artifacts it must propagate to.
 
+### 2.1.0 — 2026-08-03 — The HUMAN-block gate is removed
+
+**Owner, verbatim:** *"That CI with the human block is f——ed up. Remove it. Let's first remove it in another PR and then rebase these two open PRs. So I don't f——ing need the human block at all. F—— that completely."* (Expletives elided; the emphasis is the owner's and is preserved.)
+
+**What the old rule got wrong.** The gate required every PR body to carry a non-empty `## HUMAN:` section, and instructed agents never to write it. Its purpose was to guarantee that a human voice survived in the record of each change. It contradicts the premise of the amendment that shipped alongside it. Amendment 2.0.0 quotes the owner as *"I will not actively working on this repository anymore"* and redesigned CI around a dormant repository — manual dispatch instead of an unattended schedule, precisely because alerts with no response owner are waste. A required check that only the owner can satisfy converts every completed agent change into a manual chore on that same dormant repository, and blocks it indefinitely until the owner returns. The two rules cannot both hold: CI was made change-driven so the repo could sleep, and this gate made every change wait for a person.
+
+The gate also mistook the location of the record. The durable human decision in this project is the constitution and its amendments, where owner reasoning is quoted verbatim and dated. That is where a human voice belongs and where it is actually preserved; a per-PR prose box duplicates it into a second, weaker surface, which "Generate, never duplicate" already rejects.
+
+**New rule.** There is no `HUMAN:` block. PR bodies keep the sections that carry engineering content — what changed, validation bound to an exact SHA, the process trace, and the abandoned-routes row. The required `ci.yml` contexts are `build-and-audit`, `e2e`, and `bundlers`. Owner decisions continue to be recorded here as amendments, quoted verbatim.
+
+**Sync Impact Report** — artifacts this amendment must propagate to:
+- `.github/workflows/ci.yml` — **required and done**: the `human-block` job is deleted.
+- `.github/pull_request_template.md` — **required and done**: the `## HUMAN:` section and the header instruction to keep it are removed.
+- `AGENTS.md` and `CLAUDE.md` § GitHub workflow — **required and done**: the bullet forbidding agents from filling the block is removed.
+- GitHub `main` branch protection — **required**: `human-block` is dropped from the required contexts, leaving three. Enforcement for administrators is unchanged.
+- `PRINCIPLES.md` amendment index and version header — **required and done**.
+- Open PRs #22 and #24 — **required**: both were blocked solely by this check and are rebased onto the amended `main`.
+
 ### 2.0.0 — 2026-08-03 — Bootstrap ends: PR CI is required, weekly monitoring is retired
 
 **Owner, verbatim:** *“Why do you make it a weekly job? Why not just make it mandatory for every PR? Especially because I will not actively working on this repository anymore. So a weekly job sounds like a waste.”*

@@ -100,8 +100,6 @@ identity.
 - The **abandoned/wasted routes** row is the primary record of what did not work.
 - **A PR that changes how a patch sounds carries its blind-comparison result and the verbal reason**,
   not only metrics.
-- The PR body's `HUMAN:` block is written by the owner and **must not be edited by an agent**. CI
-  fails if it is missing. If it needs updating, stop and ask.
 - Append to the journey log at the end of any substantial session — one comment, never an edit.
   Owner quotes marked as such: the agent operates the owner's account, so authorship is not evidence
   of voice.
