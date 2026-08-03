@@ -67,7 +67,7 @@ The rest runs at the context rate: the amplitude envelope is applied after decim
 
 The shared LFO is evaluated once per block into a scratch buffer and read by every voice, so a chord modulates at the same rate as a single note.
 
-Scheduled events are applied at sample accuracy. `process()` renders in segments between event boundaries rather than one segment per 128-frame render quantum, so a note begins on the frame it was scheduled for. Applying events at block granularity instead would put up to 2.7 ms of jitter on every onset at 48 kHz, which is audible on a sixteenth-note line.
+Scheduled events are applied at sample accuracy. `process()` renders in segments between event boundaries rather than one segment per render quantum, so a note begins on the frame it was scheduled for. Applying events at quantum granularity instead would put up to one render quantum of jitter on every onset, which is audible on a sixteenth-note line.
 
 The DSP source is [`crates/dsp/`](https://github.com/keunwoochoi/subtractive-synthesizers.js/tree/main/crates/dsp/src) — `osc.rs`, `filter.rs`, `voice.rs`, `fx.rs`, and the engine plus its C ABI in `lib.rs`. The worklet hosting it is [`packages/core/worklet/processor.js`](https://github.com/keunwoochoi/subtractive-synthesizers.js/blob/main/packages/core/worklet/processor.js). Design rationale is recorded in [`agentic-docs/design/`](https://github.com/keunwoochoi/subtractive-synthesizers.js/tree/main/agentic-docs/design).
 
