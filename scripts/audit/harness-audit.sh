@@ -64,6 +64,10 @@ echo "== engine checks (stability, headroom, effects) =="
 node scripts/verify/check_engine.mjs | tail -3
 
 echo
+echo "== scheduling (onsets land on their frame) =="
+node scripts/verify/check_scheduling.mjs | tail -3
+
+echo
 echo "== patch bank (stability, loudness match, distinctness) =="
 node scripts/verify/check_patches.mjs | tail -4
 

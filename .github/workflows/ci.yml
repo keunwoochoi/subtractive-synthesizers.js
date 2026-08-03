@@ -38,6 +38,9 @@ jobs:
       - name: Engine checks on the shipped WASM
         run: node scripts/verify/check_engine.mjs
 
+      - name: Scheduled onsets land on their frame
+        run: node scripts/verify/check_scheduling.mjs
+
       - name: Public engine lifecycle and worklet failure paths
         run: npm run test:lifecycle
 
