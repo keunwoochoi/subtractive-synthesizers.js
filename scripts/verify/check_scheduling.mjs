@@ -17,9 +17,13 @@ import { readFileSync } from "node:fs";
 import { PARAM } from "../../packages/core/src/index.js";
 
 const WASM = "packages/core/wasm/subtractive_dsp.wasm";
-const SR = 48000;
 const QUANTUM = 128;
 const TOLERANCE = 1;
+// Both rates a browser actually hands out: 48 kHz on Chromium, 44.1 kHz on WebKit. A
+// single rate is not a sweep -- with only 48 kHz exercised, replacing the seconds-to-
+// frames conversion with a hard-coded 1/48000 passes every check here and displaces
+// every off-grid event on Safari. PRINCIPLES #1: gate on the worst case over the sweep.
+const RATES = [44100, 48000];
 
 const fails = [];
 const check = (ok, name, detail) => {
@@ -29,12 +33,9 @@ const check = (ok, name, detail) => {
 
 // ---------------------------------------------------------------------------------
 // AudioWorkletGlobalScope, only as far as processor.js actually reaches into it.
-// `currentTime` is the time at the START of the current render quantum and is read
-// inside process(), so it has to be a live getter rather than a captured number --
-// freezing it is precisely the bug that would make a block-granular implementation
-// look correct here.
 // ---------------------------------------------------------------------------------
 let blocksRendered = 0;
+let contextRate = RATES[RATES.length - 1];
 let registered = null;
 
 class FakePort {
@@ -43,9 +44,16 @@ class FakePort {
   deliver(data) { this.onmessage({ data }); }
 }
 
-globalThis.sampleRate = SR;
+// Both are getters. `sampleRate` because the sweep changes it between runs and the
+// processor reads it inside process() as well as at boot; `currentTime` because it is
+// the time at the START of the current render quantum, and freezing it is precisely the
+// bug that would make a block-granular implementation look correct here.
+Object.defineProperty(globalThis, "sampleRate", {
+  get: () => contextRate,
+  configurable: true,
+});
 Object.defineProperty(globalThis, "currentTime", {
-  get: () => (blocksRendered * QUANTUM) / SR,
+  get: () => (blocksRendered * QUANTUM) / contextRate,
   configurable: true,
 });
 globalThis.AudioWorkletProcessor = class { constructor() { this.port = new FakePort(); } };
@@ -74,6 +82,34 @@ class BlockGranularProcessor extends Processor {
       this.cursor++;
     }
     this.render(out, 0, n);
+    return true;
+  }
+}
+
+/** The regression the rate sweep exists for: the seconds-to-frames conversion hard-codes
+ * 48 kHz instead of reading the context rate. Correct on Chromium and wrong on a 44.1 kHz
+ * WebKit context, where every event is converted with a 1.088x error on its offset into
+ * the block. A single-rate gate cannot see this at all, which is why it is checked in
+ * rather than described. */
+class HardCodedRateProcessor extends Processor {
+  process(_inputs, outputs) {
+    const out = outputs[0];
+    if (!this.engine || !out || out.length === 0) return true;
+    const n = out[0].length;
+    let done = 0;
+    const t0 = currentTime;
+    const spf = 1 / 48000;
+    while (this.cursor < this.queue.length) {
+      const ev = this.queue[this.cursor];
+      let frame = Math.round((ev.at - t0) / spf);
+      if (frame >= n) break;
+      if (frame < done) frame = done;
+      this.render(out, done, frame - done);
+      done = frame;
+      this.apply(ev);
+      this.cursor++;
+    }
+    this.render(out, done, n - done);
     return true;
   }
 }
@@ -128,12 +164,9 @@ function onsetAtOrAfter(buf, from) {
 // from having chosen convenient offsets.
 const OFFSETS = [0, 1, 37, 64, 91, 127, 5, 113];
 const SPACING = 4096;                     // >> the ~240-frame lifetime of a sustain-0 blip
-const NOTES = OFFSETS.map((offset, i) => {
-  const frame = i * SPACING + offset;
-  return { frame, offset, at: frame / SR };
-});
+const NOTES = OFFSETS.map((offset, i) => ({ frame: i * SPACING + offset, offset }));
 const TOTAL = NOTES.length * SPACING + SPACING;
-const events = NOTES.map(({ at }) => ({ type: "noteOn", note: 48, vel: 1, at }));
+const ON_GRID = NOTES.findIndex(({ offset }) => offset === 0);
 
 /** Error in frames per note, positive = late. A note that never sounds reads as null. */
 function onsetErrors(buf) {
@@ -143,31 +176,55 @@ function onsetErrors(buf) {
   });
 }
 
+/** Render both implementations at one context rate. Events are rebuilt per rate because
+ * a scheduled time is seconds, not frames — which is the whole point of sweeping. */
+function runAtRate(rate) {
+  contextRate = rate;
+  const events = NOTES.map(({ frame }) => ({ type: "noteOn", note: 48, vel: 1, at: frame / rate }));
+  const shipped = render(Processor, events, TOTAL);
+  return {
+    rate,
+    firstSound: onsetAtOrAfter(shipped, 0),
+    shipped: onsetErrors(shipped),
+    regressed: onsetErrors(render(BlockGranularProcessor, events, TOTAL)),
+    hardCoded: onsetErrors(render(HardCodedRateProcessor, events, TOTAL)),
+  };
+}
+
+const runs = RATES.map(runAtRate);
+
+// ---------------------------------------------------------------------------------
+// The shipped path: a note starts on the frame it was scheduled for, at every rate.
+// ---------------------------------------------------------------------------------
 console.log("\n== scheduled onsets land on their frame ==");
 
-const shipped = render(Processor, events, TOTAL);
-const shippedErrors = onsetErrors(shipped);
-
-check(
-  onsetAtOrAfter(shipped, 0) === NOTES[0].frame,
-  "the bus is exact silence until the first scheduled note",
-  "onset detection needs no amplitude threshold",
-);
-
-for (const [i, { offset }] of NOTES.entries()) {
-  const error = shippedErrors[i];
+for (const { rate, firstSound, shipped } of runs) {
   check(
-    error !== null && Math.abs(error) <= TOLERANCE,
-    `note at quantum offset ${String(offset).padStart(3)} starts on its frame`,
-    error === null ? "never sounded" : `error ${error > 0 ? "+" : ""}${error} frame(s)`,
+    firstSound === NOTES[0].frame,
+    `${rate} Hz — the bus is exact silence until the first scheduled note`,
+    "onset detection needs no amplitude threshold",
+  );
+  const bad = NOTES.map(({ offset }, i) => ({ offset, error: shipped[i] }))
+    .filter(({ error }) => error === null || Math.abs(error) > TOLERANCE);
+  check(
+    bad.length === 0,
+    `${rate} Hz — every note starts within ${TOLERANCE} frame of its schedule`,
+    bad.length
+      ? bad.map(({ offset, error }) => `offset ${offset}: ${error === null ? "never sounded" : error}`).join(", ")
+      : NOTES.map(({ offset }, i) => `${offset}→${shipped[i]}`).join(" "),
   );
 }
 
-const worst = shippedErrors.reduce((a, b) => (b !== null && Math.abs(b) > Math.abs(a) ? b : a), 0);
+// Worst case over the sweep, never the average (PRINCIPLES #1).
+const worst = runs.flatMap(({ rate, shipped }) =>
+  shipped.map((error, i) => ({ rate, offset: NOTES[i].offset, error })))
+  .reduce((a, b) => (b.error === null || Math.abs(b.error) > Math.abs(a.error ?? 0) ? b : a));
 check(
-  Math.abs(worst) <= TOLERANCE,
-  "worst onset error over the run",
-  `${Math.abs(worst)} frame(s), tolerance ${TOLERANCE}`,
+  worst.error !== null && Math.abs(worst.error) <= TOLERANCE,
+  "worst onset error over the whole sweep",
+  worst.error === null
+    ? `a note never sounded at ${worst.rate} Hz`
+    : `${Math.abs(worst.error)} frame(s) at ${worst.rate} Hz offset ${worst.offset}, tolerance ${TOLERANCE}`,
 );
 
 // ---------------------------------------------------------------------------------
@@ -176,37 +233,68 @@ check(
 // ---------------------------------------------------------------------------------
 console.log("\n== the gate rejects a block-granular implementation ==");
 
-const regressed = render(BlockGranularProcessor, events, TOTAL);
-const regressedErrors = onsetErrors(regressed);
+for (const { rate, regressed } of runs) {
+  // Normalised against the on-grid note, whose placement both implementations agree on.
+  // Asserting a raw -offset would hard-code today's DSP onset latency: if a legitimate
+  // change made the first non-silent sample arrive one frame after note_on, the shipped
+  // path would still pass its tolerance while this fixture failed CI.
+  const latency = regressed[ON_GRID];
+  const displacement = NOTES.map(({ offset }, i) => ({
+    offset,
+    actual: regressed[i] === null || latency === null ? null : regressed[i] - latency,
+    expected: -offset,
+  }));
+  check(
+    displacement.every(({ actual, expected }) => actual === expected),
+    `${rate} Hz — each note is pulled back to its block boundary`,
+    displacement.map(({ offset, actual }) => `${offset}→${actual}`).join(" "),
+  );
 
-// Under block-granular application a note is pulled back to the start of the block it
-// fell in, so its error is exactly minus its offset. Asserting the mechanism rather than
-// "something differed" is what makes this a fixture and not a smoke test.
-const displaced = NOTES.map(({ offset }, i) => ({ offset, error: regressedErrors[i], expected: -offset }));
-check(
-  displaced.every(({ error, expected }) => error === expected),
-  "each note is pulled back to its block boundary",
-  displaced.map(({ offset, error }) => `${offset}→${error}`).join(" "),
-);
+  const shouldBeCaught = NOTES.map(({ offset }, i) => ({ offset, error: regressed[i] }))
+    .filter(({ offset }) => offset > TOLERANCE);
+  const caught = shouldBeCaught.filter(({ error }) => error === null || Math.abs(error) > TOLERANCE);
+  check(
+    shouldBeCaught.length > 0 && caught.length === shouldBeCaught.length,
+    `${rate} Hz — every note further than the tolerance from a boundary is rejected`,
+    `${caught.length} of ${shouldBeCaught.length} off-grid notes fail the gate`,
+  );
 
-const shouldBeCaught = displaced.filter(({ offset }) => offset > TOLERANCE);
-const caught = shouldBeCaught.filter(({ error }) => error === null || Math.abs(error) > TOLERANCE);
-check(
-  caught.length === shouldBeCaught.length && shouldBeCaught.length > 0,
-  "every note further than the tolerance from a boundary is rejected",
-  `${caught.length} of ${shouldBeCaught.length} off-grid notes fail the gate`,
-);
+  const onBoundary = NOTES.map(({ offset }, i) => ({ offset, error: regressed[i] }))
+    .filter(({ offset }) => offset <= TOLERANCE);
+  check(
+    onBoundary.every(({ error }) => error !== null && Math.abs(error) <= TOLERANCE),
+    `${rate} Hz — notes already on the boundary still pass under the regression`,
+    "the gate measures placement inside the block, not a constant offset",
+  );
+}
 
-const withinTolerance = displaced.filter(({ offset }) => offset <= TOLERANCE);
-check(
-  withinTolerance.every(({ error }) => error !== null && Math.abs(error) <= TOLERANCE),
-  "notes already on the boundary still pass under the regression",
-  "the gate measures placement inside the block, not a constant offset",
-);
+// ---------------------------------------------------------------------------------
+// Prove the SWEEP fails closed, not just the gate. A second rate that never catches
+// anything is scaffolding; this is the regression it is here for.
+// ---------------------------------------------------------------------------------
+console.log("\n== the sweep rejects a hard-coded 48 kHz conversion ==");
+
+const outsideTolerance = (errors) =>
+  NOTES.map(({ offset }, i) => ({ offset, error: errors[i] }))
+    .filter(({ error }) => error === null || Math.abs(error) > TOLERANCE);
+
+for (const { rate, hardCoded } of runs) {
+  const bad = outsideTolerance(hardCoded);
+  const detail = NOTES.map(({ offset }, i) => `${offset}→${hardCoded[i]}`).join(" ");
+  if (rate === 48000) {
+    check(
+      bad.length === 0,
+      `${rate} Hz — the hard-coded variant is indistinguishable from the shipped path`,
+      "which is exactly why one rate is not a sweep",
+    );
+  } else {
+    check(bad.length > 0, `${rate} Hz — the hard-coded variant is rejected`, detail);
+  }
+}
 
 console.log(
   fails.length
     ? `\nscheduling FAILED — ${fails.length} check(s): ${fails.join(", ")}`
-    : `\nscheduling OK — every onset within ${TOLERANCE} frame, and block-granular application is rejected`,
+    : `\nscheduling OK — every onset within ${TOLERANCE} frame at ${RATES.join(" and ")} Hz, and block-granular application is rejected`,
 );
 process.exit(fails.length ? 1 : 0);
