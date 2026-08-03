@@ -63,7 +63,7 @@ PolyBLEP saw/pulse/triangle (unison, drift, hard sync) + sub + noise
   → half-band decimator
 ```
 
-The rest runs at the context rate: the amplitude envelope is applied after decimation, then voices sum into chorus, ping-pong delay, and FDN reverb, in that order, followed by a gain stage and soft clip. Oscillators and filter are oversampled together because both generate energy above the audible band — step discontinuities and saturated feedback — and decimating after the filter gives that energy an extra octave of room before it can fold back. The measured result is in [Measured alias suppression](#measured-alias-suppression): -31.4 dB on the shipped path against -27.0 dB at 1x.
+The rest runs at the context rate: the amplitude envelope is applied after decimation, then voices sum into chorus, ping-pong delay, and FDN reverb, in that order, followed by a gain stage and soft clip. Oscillators and filter are oversampled together because both generate energy above the audible band — step discontinuities and saturated feedback — and decimating after the filter gives that energy an extra octave of room before it can fold back. [Verification](#verification) grades the oscillator and decimator in isolation — `render_osc` bypasses the filter and envelopes on purpose, so an alias regression is attributable to a named stage rather than to the voice as a whole. The filter's own contribution to aliasing is not covered by that gate.
 
 The shared LFO is evaluated once per block into a scratch buffer and read by every voice, so a chord modulates at the same rate as a single note.
 
