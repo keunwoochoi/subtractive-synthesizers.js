@@ -21,7 +21,7 @@
     "docs:check": "node scripts/gen_parameters.mjs --check && python3 scripts/gen_docs.py --check",
     "e2e": "node scripts/dev/e2e-check.mjs",
     "dev": "scripts/dev/serve.sh",
-    "verify:engine": "node scripts/verify/check_engine.mjs",
+    "verify:engine": "node scripts/verify/check_engine.mjs && node scripts/verify/check_scheduling.mjs",
     "bench": "node scripts/verify/dsp_bench.mjs",
     "check:ci": "scripts/audit/check-ci.sh",
     "verify:patches": "node scripts/verify/check_patches.mjs",
