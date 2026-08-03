@@ -33,7 +33,15 @@ scripts/audit/check-identity.sh --warn
 
 echo
 echo "== CI at head =="
-scripts/audit/check-ci.sh || true
+if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+  # Querying the workflow that is currently running can only report "in progress",
+  # and the ephemeral Actions identity intentionally cannot pass gh-owner.sh. The
+  # workflow itself supplies the remote verdict; keep the exact-head query for local
+  # and release-readiness use, where it answers a real question.
+  echo "ci check: current GitHub Actions workflow supplies this verdict; skipping recursive query"
+else
+  scripts/audit/check-ci.sh || true
+fi
 
 echo
 echo "== proving the audit can fail =="

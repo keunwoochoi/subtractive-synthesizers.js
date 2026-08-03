@@ -195,8 +195,7 @@ Cheap, well-evidenced, and now part of M0:
   the owner's account, so authorship is not evidence of voice.
 - **Generated doc sections between markers**, with `docs:check` diffing regeneration as a test
   failure (cargo-rdme / readme-sync).
-- **Weekly cron for the harness audit** — half of harness rot is time-based and never coincides with
-  a commit that touches the harness (agents-lint).
+- **Change-driven and manually dispatched harness audit, not a weekly cron** — the initial design copied agents-lint's weekly schedule, but the owner ended it on 2026-08-03 because this repository will not have an active maintenance cadence. Monitoring without a response owner is alert noise: `ci.yml` runs the harness on every PR and `main` push, and its manual dispatch is the dormant-repository re-entry gate. Issue #21 owns the decision and its evidence.
 - **Compact tool/error output** — verbose human-oriented errors overload agents (SWE-agent).
 
 ## Refused, with reasons

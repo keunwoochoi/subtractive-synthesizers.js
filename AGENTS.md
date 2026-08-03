@@ -38,9 +38,7 @@ Off by default. A human lifts one per task, explicitly.
 - paid or quota-consuming external resources: **off**
 - public posts, docs deploys: **off**
 - force-push, `--no-verify`: **never**
-- push / merge to `main`: **LIFTED for bootstrap** — owner, 2026-07-28. Worktrees and PRs are at the
-  agent's discretion; the durable record lives in commit messages either way. See `PRINCIPLES.md`
-  amendment 1.1.0. Reinstated at first release tag.
+- push / merge to `main`: **PR + required CI only** — the bootstrap exception ended by owner decision on 2026-08-03; see `PRINCIPLES.md` amendment 2.0.0. The server-side branch rule is the enforcement; never bypass it.
 
 ## Commit messages own the engineering record
 

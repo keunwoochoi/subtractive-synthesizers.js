@@ -181,8 +181,8 @@ Budget is 60 KB gzipped for the whole library — currently **67%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **11.8 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 8.5x |
+| audio-thread budget used | **10.2 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 9.8x |
 <!-- /generated:bench -->
 
 The benchmark saturates the voice pool with the reference arrangement and enables chorus, which is the worst case this build can produce. The measurement describes the machine that regenerated the table; performance on other devices, including mobile devices, is not claimed.
@@ -239,7 +239,7 @@ Every exported preset is bound to exactly one checked intent artifact. `prior` m
 <!-- generated:harness-stats -->
 | | |
 |---|---|
-| harness audit assertions | 26 |
+| harness audit assertions | 27 |
 | Python harness/spec tests | 23 |
 | public metadata/README tests | 10 |
 | deliberately-broken fixtures | 8 |

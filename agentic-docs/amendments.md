@@ -7,6 +7,23 @@ context on every task, and the constitution has a hard line budget for exactly t
 Every amendment states what the old rule got wrong, quotes the owner verbatim where a decision was
 theirs, and carries a **Sync Impact Report** naming the artifacts it must propagate to.
 
+### 2.0.0 — 2026-08-03 — Bootstrap ends: PR CI is required, weekly monitoring is retired
+
+**Owner, verbatim:** *“Why do you make it a weekly job? Why not just make it mandatory for every PR? Especially because I will not actively working on this repository anymore. So a weekly job sounds like a waste.”*
+
+**What the old rule got wrong.** Amendment 1.1.0 correctly removed PR round-trips during active bootstrap and explicitly said the gate would return at release, but the repository settings never performed that return. Separately, the harness design copied a weekly rot cron from a continuously maintained project. Those choices no longer fit a shipped, dormant repository: direct pushes can evade the only useful enforcement point, while unattended monitoring produces alerts with no response owner. The first cron run proved the duplication cost directly—the scheduled workflow lacked the dependencies and Git history already configured correctly in `ci.yml`.
+
+**New rule.** Every change lands through a PR and passes the required `ci.yml` checks. `ci.yml` remains manually dispatchable and is run once when work resumes on a dormant checkout. There is no weekly workflow. The one transition commit that installs this rule lands under the previously lifted bootstrap gate; the server-side rule is enabled immediately after its CI succeeds. This is the major-version gate return anticipated by amendment 1.1.0.
+
+**Sync Impact Report** — artifacts this amendment must propagate to:
+- `PRINCIPLES.md` current rule and amendment index — **required and done**.
+- `AGENTS.md` authority gate — **required and done**.
+- `.githooks/pre-commit` — **required and done**: local audit remains, while the server-side rule owns branch enforcement.
+- `.github/workflows/ci.yml` and `.github/workflows/harness-rot.yml` — **required and done**: change-driven/manual CI remains and the scheduled duplicate is deleted.
+- `agentic-docs/design/2026-07-28-harness-evidence.md` — **required and done**: the initially adopted weekly mechanic is explicitly superseded.
+- GitHub `main` branch protection — **required after the transition commit is green**: require the four `ci` job contexts and enforce them for administrators.
+- Issue #21 and journey-log tracker #2 — **required**: exact-SHA CI and server-setting evidence are recorded there.
+
 ### 1.5.0 — 2026-08-02 — Packages are self-contained by design: no shared engine
 
 **Owner, verbatim:** *"I've never wanted to do this. My 100% conviction intention is to keep every

@@ -1,6 +1,6 @@
 # PRINCIPLES
 
-**Version 1.5.0** · Ratified 2026-07-28 · Last amended 2026-08-02
+**Version 2.0.0** · Ratified 2026-07-28 · Last amended 2026-08-03
 
 > This is the constitution. `AGENTS.md` routes; this file governs and supersedes other practice.
 > Amendments are dated, quote the owner verbatim, say what the old rule got wrong, and carry a
@@ -113,10 +113,7 @@ Loud on failure, silent on success. A lookup that quietly falls back to a defaul
 A fact in two hand-maintained places will disagree. One source, generated outward, proven by a test.
 
 ### Rules are enforced or they are deleted
-Instruction files are context, not configuration — under pressure prose gets ignored. Anything that
-must always happen is a hook, a generated artifact, or a failing test. **And the enforcement must
-itself be shown to fail correctly**, against deliberately broken fixtures. An audit never observed
-to fail is not evidence of anything.
+Instruction files are context, not configuration — under pressure prose gets ignored. Anything that must always happen is a hook, a generated artifact, or a failing test. **And the enforcement must itself be shown to fail correctly**, against deliberately broken fixtures. An audit never observed to fail is not evidence of anything. CI is change-driven: every PR must pass the required checks, direct-to-`main` bootstrap is over, and a dormant repository resumes with manual dispatch rather than an unattended schedule with no response owner.
 
 ### License hygiene is absolute
 Port MIT/BSD freely with ledger entries; never open GPL/LGPL/AGPL source — papers-only reimplementation. **Trademarks are the live risk in this domain:** the names of famous synthesizers may not be used in presets, public API, demo labels, or emulation claims. A clearly historical README section may make factual, sourced references to the machines. **Describe our sounds, never brand them.**
@@ -140,6 +137,7 @@ Current version is in the header above. Full reasoning and Sync Impact Reports:
 [`agentic-docs/amendments.md`](agentic-docs/amendments.md).
 | Version | Date | What changed |
 |---|---|---|
+| 2.0.0 | 2026-08-03 | Direct-to-main bootstrap ended; required PR CI replaces weekly monitoring |
 | 1.5.0 | 2026-08-02 | Packages are self-contained by design — no shared-engine extraction; cross-package duplication is deliberate |
 | 1.4.0 | 2026-08-01 | Factual, sourced instrument history permitted in one README section; branded sounds remain prohibited |
 | 1.3.0 | 2026-07-28 | Publishing identity is constitutional — GitHub actions come from the owning account, enforced |

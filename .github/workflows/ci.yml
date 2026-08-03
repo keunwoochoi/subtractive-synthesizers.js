@@ -11,12 +11,12 @@ jobs:
     steps:
       # Intent provenance is a history claim: the audit reads the frozen migration
       # cutoff and proves every future prior intent is an ancestor of its preset.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with: { fetch-depth: 0 }
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with: { python-version: '3.11' }
-      - uses: actions/setup-node@v4
-        with: { node-version: '20' }
+      - uses: actions/setup-node@v6
+        with: { node-version: '20', package-manager-cache: false }
       # rust-toolchain.toml pins the exact version. The pin exists because the shipped
       # WASM is committed and byte-compared; a moving channel means different bytes.
       - run: rustup show && rustup target add wasm32-unknown-unknown
@@ -59,9 +59,9 @@ jobs:
   e2e:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '20' }
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: { node-version: '20', package-manager-cache: false }
       - run: rustup show && rustup target add wasm32-unknown-unknown
       - run: cargo build -p subtractive-dsp --target wasm32-unknown-unknown --release
       - run: npm ci --no-audit --no-fund
@@ -95,9 +95,9 @@ jobs:
     # means a bundler outage does not hide an audio regression.
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '20' }
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: { node-version: '20', package-manager-cache: false }
       - run: rustup show && rustup target add wasm32-unknown-unknown
       - run: cargo build -p subtractive-dsp --target wasm32-unknown-unknown --release
       - run: cp target/wasm32-unknown-unknown/release/subtractive_dsp.wasm packages/core/wasm/

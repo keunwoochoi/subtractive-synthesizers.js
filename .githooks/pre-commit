@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Direct commits to main are permitted during bootstrap (PRINCIPLES.md amendment 1.1.0).
-# The harness audit is not optional either way.
+# Server-side required PR checks own the main-branch gate (PRINCIPLES.md amendment 2.0.0).
+# This hook owns the local harness audit; neither layer replaces the other.
 set -euo pipefail
 exec scripts/audit/harness-audit.sh
