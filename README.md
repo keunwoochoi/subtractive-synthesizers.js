@@ -305,3 +305,5 @@ There were times when finding a cool subtractive synthesizer sound was enough to
 ## License
 
 Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option. Porting and trademark policy is recorded in the repository's [licensing ledger](https://github.com/keunwoochoi/subtractive-synthesizers.js/blob/main/agentic-docs/licensing.md).
+
+<!-- scratch: watching the release-impact job go red; to be closed -->
