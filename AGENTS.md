@@ -95,6 +95,8 @@ identity.
 - Search existing issues and PRs before creating a work item.
 - Every implementation PR adopts an issue. Title `type(scope): imperative summary`.
 - Open PRs as **drafts**. Body links `Closes #N`, states impact and validation, names review focus.
+- **Every PR declares `Release-Impact: none|patch|minor|major — reason`** — whether it changes what a user installs. Non-`none` writes its `[Unreleased]` entry here; the line proposes, never bumps.
+- **Start every branch in a linked worktree; delete it once the PR merges** — `python3 scripts/dev/worktree.py start|finish`. The primary checkout stays on a clean `main`.
 - **Evidence is bound to an exact SHA and a clean tree.** Evidence produced on a dirty working tree
   is not evidence. After any head change, rerun it or label it historical.
 - The **abandoned/wasted routes** row is the primary record of what did not work.
@@ -119,6 +121,8 @@ must always happen is a hook, a generated artifact, or a failing test. These are
 | Commit messages carry all five sections | `.githooks/commit-msg` |
 | GitHub actions come from the owning account | `scripts/gh-owner.sh` (use always); `scripts/audit/check-identity.sh` runs first in the audit |
 | Evidence matches head SHA and a clean tree | required PR check |
+| Every PR declares its release impact, and a releasable one carries a changelog entry | `scripts/release/check_release_impact.py` (required PR check) |
+| Commits happen in a linked worktree, and a merged worktree is deleted | `.githooks/pre-commit`; `scripts/dev/worktree.py audit` |
 | **The audit itself fails when it should** | `scripts/audit/fixtures/` — deliberately broken inputs the audit must reject |
 
 That last row is the one the sibling project never had. **An audit never observed to fail is not
