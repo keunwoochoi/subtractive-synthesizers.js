@@ -52,6 +52,20 @@ echo "== proving the release CI gate fails closed =="
 run_tests scripts/release/test_check_ci.py
 
 echo
+echo "== worktrees (merged ones are deleted, not kept) =="
+# Offline by design: this runs inside the pre-commit hook, so it reads origin/main as
+# last fetched rather than reaching the network on every commit.
+python3 scripts/dev/worktree.py audit
+
+echo
+echo "== proving the worktree lifecycle refuses what it should =="
+run_tests scripts/dev/test_worktree.py
+
+echo
+echo "== proving the release-impact gate fails closed =="
+run_tests scripts/release/test_check_release_impact.py
+
+echo
 echo "== proving verify-spec rejects cheats =="
 run_tests scripts/verify/test_verify_spec.py
 
